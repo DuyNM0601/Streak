@@ -15,7 +15,7 @@ Người dùng nói chuyện bằng tiếng Việt. Trả lời, comment giải 
 - EF Core 10 + SQL Server
 - **MediatR 12.0.1** cho CQRS — ghim đúng bản này, vì từ bản 13.0 (7/2025) MediatR chuyển sang licence kép (RPL 1.5 / thương mại qua công ty Lucky Penny Software của Jimmy Bogard). 12.0.1 là bản Apache 2.0 thuần, không có vấn đề licence, dù không còn fix mới.
 - FluentValidation 12.2.0
-- Auth: `Microsoft.AspNetCore.Authentication.JwtBearer` (Api, kiểm token), `Microsoft.IdentityModel.JsonWebTokens` (Infrastructure, ký token), `Microsoft.Extensions.Identity.Core` (Infrastructure, chỉ lấy `PasswordHasher` để băm mật khẩu, KHÔNG dùng ASP.NET Identity đầy đủ)
+- Auth: `Microsoft.IdentityModel.JsonWebTokens` (Infrastructure, ký JWT), `Microsoft.Extensions.Identity.Core` (Infrastructure, chỉ lấy `PasswordHasher` để băm mật khẩu, KHÔNG dùng ASP.NET Identity đầy đủ). Chưa có `JwtBearer` vì chưa có endpoint nào cần bảo vệ — thêm khi cần.
 - `Microsoft.AspNetCore.OpenApi` (sinh tài liệu OpenAPI JSON mặc định của .NET) + `Scalar.AspNetCore` (giao diện thử API tại `/scalar`, chỉ bật ở Development). Không dùng Swashbuckle — Microsoft đã bỏ nó khỏi template từ .NET 9.
 
 ## 3. Kiến trúc: Clean Architecture + Vertical Slice + CQRS/MediatR
@@ -29,7 +29,6 @@ Streak/BE/
   Directory.Packages.props   # khoá version NuGet tập trung (Central Package Management)
   Streak.Domain/
     Entities/User.cs                 # entity thật, không biết EF Core, không biết ai cả
-    Models/UserModel.cs              # DTO trả ra ngoài, không lộ Entity (không có PasswordHash)
   Streak.Application/
     Abstractions/IApplicationDbContext.cs   # Application chỉ biết interface này, không biết EF Core thật
     Abstractions/IPasswordService.cs, ITokenService.cs   # băm mật khẩu / phát JWT, Infrastructure cài đặt
@@ -38,7 +37,6 @@ Streak/BE/
     Shared/ValidationBehavior.cs   # pipeline MediatR, throw ValidationException cho lỗi input
     Features/Auth/
       Commands/RegisterCommand, LoginCommand (+Validator+Handler)
-      Queries/GetCurrentUserQuery(+Handler)
     DependencyInjection.cs      # AddApplication(): AddMediatR + AddValidatorsFromAssemblyContaining
   Streak.Infrastructure/
     StreakDbContext.cs : IApplicationDbContext   # cài đặt interface của Application
@@ -50,7 +48,7 @@ Streak/BE/
   Streak.Api/
     Shared/ResultHttpExtensions.cs   # ToHttpResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core; map Error.Code sang 401/404/409/400
     ValidationExceptionHandler.cs    # bắt ValidationException, đổi thành 400 ValidationProblem
-    Features/Auth/AuthEndpoints.cs   # MapAuthApi(): POST /auth/register, POST /auth/login, GET /auth/me (cần token)
+    Features/Auth/AuthEndpoints.cs   # MapAuthApi(): POST /auth/register, POST /auth/login
     Program.cs
 fe/   # Vite + React (React thuần, không phải Next.js), xem mục 6
 ```
@@ -85,11 +83,11 @@ Mỗi tính năng một thư mục dưới `Features/{Entity}/`, tách `Commands
 
 ### Auth (JWT access token)
 
-- `POST /auth/register` và `POST /auth/login` (body: email + mật khẩu, register thêm displayName) trả `{ accessToken, expiresAt, user }`. `GET /auth/me` cần header `Authorization: Bearer <token>`.
+- `POST /auth/register` và `POST /auth/login` (body: email + mật khẩu, register thêm displayName) trả `{ accessToken, expiresAt, userId, email, displayName }` (`AuthResult`, không có PasswordHash). Chỉ phát token, chưa có endpoint nào kiểm token.
 - Mật khẩu chỉ lưu hash (`PasswordHasher` của .NET, PBKDF2). Email lưu chữ thường, unique. Login sai email hay sai mật khẩu đều trả cùng 1 thông báo (không lộ email nào đã đăng ký).
 - Mã lỗi nghiệp vụ → HTTP trong `ResultHttpExtensions`: `Unauthorized`→401, `NotFound`→404, `Conflict`→409, còn lại 400. Handler vẫn chỉ trả `Fail(new Error(code, message))`, không biết HTTP.
 - Khoá ký JWT (`Jwt:Key`, ≥ 32 ký tự) **không đặt trong appsettings**, dev dùng user-secrets (`UserSecretsId` = `streak-api`): `dotnet user-secrets set "Jwt:Key" "<chuỗi ngẫu nhiên>" --project Streak.Api`. Thiếu hoặc ngắn thì app báo lỗi rõ khi khởi động (`ValidateOnStart`). Issuer/Audience/ExpiresMinutes (mặc định `streak-api`/`streak-fe`/60) có thể ghi đè ở section `Jwt`.
-- `MapInboundClaims = false` ở `Program.cs`: claim giữ tên `sub`/`email` (mặc định JwtBearer đổi `sub` thành `ClaimTypes.NameIdentifier`, đọc `"sub"` sẽ ra null → 401 oan).
+- Khi thêm `JwtBearer` để bảo vệ endpoint: đặt `MapInboundClaims = false` nếu muốn đọc claim `sub`/`email` đúng tên (mặc định JwtBearer đổi `sub` thành `ClaimTypes.NameIdentifier`, đọc `"sub"` sẽ ra null → 401 oan). Token ký trong `JwtTokenService` có claim `sub`/`email`/`name`.
 - Bảng `Users` **cần migration** (xem mục 4) trước khi register/login chạy được.
 
 ## 4. Database
@@ -152,7 +150,7 @@ Chạy xong, `POST /auth/register` và `/auth/login` sẽ lỗi 500 ("Cannot ope
 - Entity nghiệp vụ thật (`Reminder`, `ReminderChannel`, streak/thống kê thật) chưa viết, mới có `User`.
 - Chưa có test project (cả BE và FE).
 - Repo đã `git init` và nối remote `https://github.com/DuyNM0601/Streak.git` (branch `main`). `Streak/fe/` chưa commit lần nào.
-- FE popup đăng nhập chỉ là giao diện, chưa gọi API thật. BE đã có `/auth/register`, `/auth/login`, `/auth/me`; còn thiếu: migration bảng `Users`, nối form FE, lưu token phía FE.
+- FE popup đăng nhập chỉ là giao diện, chưa gọi API thật. BE đã có `/auth/register`, `/auth/login`; còn thiếu: migration bảng `Users`, nối form FE, lưu token phía FE, `JwtBearer` + endpoint cần bảo vệ.
 - Chưa có migration cho bảng `Users` (chỉ tạo khi được yêu cầu, xem mục 4).
 
 ## 8. Cách làm việc với Claude

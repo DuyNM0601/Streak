@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="Streak.Domain/Streak.Domain.csproj" />
-  <Project Path="Streak.Application/Streak.Application.csproj" />
-  <Project Path="Streak.Infrastructure/Streak.Infrastructure.csproj" />
-  <Project Path="Streak.Migrations/Streak.Migrations.csproj" />
-  <Project Path="Streak.Api/Streak.Api.csproj" />
-</Solution>
