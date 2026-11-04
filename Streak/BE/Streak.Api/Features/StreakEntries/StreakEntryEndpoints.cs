@@ -19,12 +19,6 @@ public static class StreakEntryEndpoints
             return result.ToCreatedResult("/streak-entries");
         });
 
-        group.MapGet("/{id}", async (string id, ISender sender) =>
-        {
-            var result = await sender.Send(new GetStreakEntryByIdQuery(id));
-            return result.ToFoundResult();
-        });
-
         group.MapGet("/", async (string? userId, ISender sender, int skip = 0, int top = 20) =>
         {
             var result = await sender.Send(new SearchStreakEntriesQuery(userId, skip, top == 0 ? 20 : top));

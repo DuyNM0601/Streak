@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Set theme trước khi React mount, tránh nhấp nháy sai theme lúc tải trang.
+      try {
+        var t = localStorage.getItem("streak-theme") || "dark";
+        document.documentElement.classList.toggle("dark", t === "dark");
+      } catch (e) {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Nhắc nhở kỷ luật cá nhân, leo thang qua web, email và gọi điện nếu bạn chưa xác nhận."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Streak</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

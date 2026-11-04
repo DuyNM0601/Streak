@@ -11,5 +11,7 @@ public interface IApplicationDbContext
 {
     DbSet<StreakEntry> StreakEntries { get; }
 
+    DbSet<User> Users { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

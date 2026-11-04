@@ -1,0 +1,428 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --card: #f8fafc;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted-foreground: #475569;
+  --primary: #b45309;
+  --primary-foreground: #ffffff;
+  --accent: #fde68a;
+  --accent-foreground: #92400e;
+  --success: #15803d;
+  --success-bg: #dcfce7;
+  --warning: #92400e;
+  --warning-bg: #fef3c7;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --radius: 0.625rem;
+  --card-foreground: #0f172a;
+  --popover: #f8fafc;
+  --popover-foreground: #0f172a;
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --input: #e2e8f0;
+  --ring: #b45309;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: #0f172a;
+  --card: #192134;
+  --border: rgba(255, 255, 255, 0.08);
+  --foreground: #ffffff;
+  --muted-foreground: #94a3b8;
+  --primary: #d97706;
+  --primary-foreground: #0f172a;
+  --accent: rgba(217, 119, 6, 0.16);
+  --accent-foreground: #fbbf24;
+  --success: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.14);
+  --warning: #fb923c;
+  --warning-bg: rgba(249, 115, 22, 0.14);
+  --danger: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.14);
+  --card-foreground: #ffffff;
+  --popover: #192134;
+  --popover-foreground: #ffffff;
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #d97706;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --font-sans: "Be Vietnam Pro", sans-serif;
+  --font-display: "Be Vietnam Pro", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-destructive: var(--destructive);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Reveal khi cuộn tới — chỉ dùng cho mặt hàng marketing (Home, Guide), không dùng cho UI thao tác
+   hàng ngày. Bật/tắt qua [data-visible] do IntersectionObserver gắn (components/reveal.tsx), có
+   dự phòng hẹn giờ nên không thể kẹt ẩn vĩnh viễn như lỗi từng gặp. */
+/* Inset âm 40px để focus ring/shadow của phần tử con không bị cắt sau khi reveal xong. */
+.reveal {
+  clip-path: inset(-40px -40px 100% -40px);
+  transition: clip-path 600ms var(--ease-in-out);
+}
+
+.reveal[data-visible] {
+  clip-path: inset(-40px);
+}
+
+/* Biến thể cho khối chữ/CTA: nổi lên nhẹ thay vì quét clip-path, để các section không vào cùng 1 kiểu. */
+.reveal-rise {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms var(--ease-out),
+    transform 600ms var(--ease-out);
+}
+
+.reveal-rise[data-visible] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Phần tử con bên trong 1 section (xem .reveal-section/.snap-page) - hiện theo đúng nhịp của
+   section cha qua CSS descendant selector, KHÔNG tự có IntersectionObserver riêng. Trước đó tiêu
+   đề và từng card đều tự dò cuộn riêng (lồng Reveal trong Reveal) nên lệch thời điểm hiện (card ở
+   vị trí thấp hơn trong section cao 100vh thì tới ngưỡng trễ hơn tiêu đề) - giờ chỉ section cha có
+   1 "công tắc" duy nhất, con chỉ khác nhau ở transitionDelay (stagger có chủ đích, không phải lệch
+   do vị trí cuộn tình cờ). */
+.stagger-fade {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+}
+
+.reveal-section[data-visible] .stagger-fade {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-fade {
+    transform: none;
+    transition: opacity 200ms ease;
+  }
+}
+
+/* Biến thể cho cả 1 section (trang dạng slide, xem .snap-page) - mờ + trượt lên 20px/400ms, nhẹ và
+   nhanh hơn .reveal-rise vì áp cho cả khối to, không phải chữ/CTA đơn lẻ. */
+.reveal-section {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 400ms var(--ease-out),
+    transform 400ms var(--ease-out);
+}
+
+.reveal-section[data-visible] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-section {
+    transform: none;
+    transition: opacity 200ms ease;
+  }
+}
+
+/* Trang dạng "slide" từng section (chỉ bật khi đang ở route đó, xem home.tsx toggle class này lên
+   <html>) - mỗi section cao trọn màn hình, cuộn 1 cái là khớp gọn sang section kế tiếp. min-height
+   (không phải height cứng) để section có nội dung dài hơn 1 màn hình (hay gặp ở mobile, chữ dài
+   xuống dòng nhiều hơn) vẫn tự giãn ra cuộn bình thường, không bị ép cắt. scroll-margin-top trừ
+   đúng chiều cao SiteHeader (sticky, py-4 + nút cao nhất h-10 ≈ 72px) để lúc snap, đầu section
+   không bị header đè lên. */
+.snap-page {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+
+.snap-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  scroll-margin-top: 4.5rem;
+}
+
+/* Lenis (components/smooth-scroll.tsx) tự điều khiển vị trí cuộn, chồng với scroll-snap sẽ giật -
+   khi Lenis đang chạy (html có class .lenis) thì tắt snap, vẫn giữ min-height 100dvh từng section. */
+html.lenis.snap-page {
+  scroll-snap-type: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snap-page {
+    scroll-snap-type: y proximity;
+    scroll-behavior: auto;
+  }
+}
+
+/* Đổi trang qua router: Layout gắn key theo pathname nên main được mount mới → @starting-style chạy lại. */
+.page-in {
+  opacity: 1;
+  transition: opacity 300ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* Style lại thanh cuộn mặc định của trình duyệt (mảnh, màu theo token, không viền trắng/xám đục
+   mặc định) - giữ nguyên cơ chế cuộn gốc của document, chỉ đổi hình thức. Firefox dùng 2 property
+   chuẩn; Chrome/Edge/Safari (WebKit) dùng pseudo-element riêng vì chưa hỗ trợ 2 property đó. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 999px;
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+}
+
+/* Thẻ thông tin tĩnh (escalation step, stat, FAQ...): nhấc nhẹ + đổ bóng khi hover thay vì chỉ đổi
+   màu viền cái rụp - phối màu viền (hover:border-primary/40, khai báo ở className) với transform/shadow ở đây. */
+.card-hover {
+  transition:
+    border-color 500ms var(--ease-hover),
+    transform 500ms var(--ease-hover),
+    box-shadow 500ms var(--ease-hover);
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -16px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-hover:hover {
+    transform: none;
+  }
+}
+
+/* Hover/active của Button (shadcn, components/ui/button.tsx): nổi nhẹ 1px + đậm bóng lúc hover,
+   thu nhỏ scale(0.97) lúc nhấn - chừa transform/shadow khi prefers-reduced-motion, giữ lại màu/bóng. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="button"] {
+    transition-property: background-color, border-color, color, box-shadow;
+  }
+
+  [data-slot="button"]:hover,
+  [data-slot="button"]:active {
+    transform: none;
+    translate: none;
+    scale: none;
+  }
+}
+
+/* Thông báo hiện ra sau khi submit form — vào bằng @starting-style, không cần JS state riêng. */
+.notice-enter {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    clip-path: none;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .reveal[data-visible] {
+    opacity: 1;
+  }
+}
+
+/* Entrance cho hero khi vào trang lần đầu (hoặc quay lại qua client-side route) — @starting-style chạy lại mỗi lần element được mount mới. */
+.hero-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* Đổi sáng/tối: tắt crossfade mặc định của View Transitions, thay bằng vòng tròn loang ra từ vị trí
+   bấm nút (toạ độ do theme-provider.tsx set qua custom property). Animation khai báo bằng @keyframes
+   (không gọi Element.animate() lên pseudo-element) để chạy được trên nhiều trình duyệt hơn. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
+  animation: theme-reveal 500ms var(--ease-in-out);
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0px at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--theme-toggle-r, 150%) at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-in {
+    transition: opacity 200ms ease;
+  }
+
+  .reveal-rise {
+    transform: none;
+    transition: opacity 200ms ease;
+  }
+
+  .auth-dialog {
+    transition:
+      opacity 150ms ease,
+      overlay 150ms allow-discrete,
+      display 150ms allow-discrete;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Popup (Dialog shadcn): bỏ animation vào/ra khi reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-content"] {
+    animation: none;
+  }
+}

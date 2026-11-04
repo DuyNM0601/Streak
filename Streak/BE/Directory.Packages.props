@@ -1,30 +1,27 @@
 <Project>
-
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Dữ liệu. Application cần DbSet<T> cho IApplicationDbContext, nên tham chiếu gói gốc. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
-
     <!-- Ghim bản vá: Microsoft.Data.SqlClient kéo theo bản cũ có lỗ hổng (GHSA-846f-f764-76mx). -->
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.23.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.7" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
-
     <!-- CQRS và validation. MediatR 12.0.1: ghim đúng theo OrderHub, vẫn Apache 2.0 thuần (trước khi
          đổi sang mô hình thương mại ở bản 13+), không có vấn đề licence. -->
     <PackageVersion Include="MediatR" Version="12.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.2.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
-
     <!-- Logging (abstraction thuần, dùng được ở Application mà không kéo theo ASP.NET Core) -->
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
-
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
     <!-- API -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
   </ItemGroup>
-
 </Project>

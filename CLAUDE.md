@@ -15,7 +15,8 @@ Người dùng nói chuyện bằng tiếng Việt. Trả lời, comment giải 
 - EF Core 10 + SQL Server
 - **MediatR 12.0.1** cho CQRS — ghim đúng bản này, vì từ bản 13.0 (7/2025) MediatR chuyển sang licence kép (RPL 1.5 / thương mại qua công ty Lucky Penny Software của Jimmy Bogard). 12.0.1 là bản Apache 2.0 thuần, không có vấn đề licence, dù không còn fix mới.
 - FluentValidation 12.2.0
-- `Microsoft.AspNetCore.OpenApi` (OpenAPI mặc định của .NET, không dùng Swashbuckle/Scalar ở service này)
+- Auth: `Microsoft.AspNetCore.Authentication.JwtBearer` (Api, kiểm token), `Microsoft.IdentityModel.JsonWebTokens` (Infrastructure, ký token), `Microsoft.Extensions.Identity.Core` (Infrastructure, chỉ lấy `PasswordHasher` để băm mật khẩu, KHÔNG dùng ASP.NET Identity đầy đủ)
+- `Microsoft.AspNetCore.OpenApi` (sinh tài liệu OpenAPI JSON mặc định của .NET) + `Scalar.AspNetCore` (giao diện thử API tại `/scalar`, chỉ bật ở Development). Không dùng Swashbuckle — Microsoft đã bỏ nó khỏi template từ .NET 9.
 
 ## 3. Kiến trúc: Clean Architecture + Vertical Slice + CQRS/MediatR
 
@@ -27,29 +28,35 @@ Streak/BE/
   Directory.Build.props      # TargetFramework net10.0, Nullable, ImplicitUsings
   Directory.Packages.props   # khoá version NuGet tập trung (Central Package Management)
   Streak.Domain/
-    Entities/StreakEntry.cs          # entity thật, không biết EF Core, không biết ai cả
-    Models/StreakEntryModel.cs       # DTO trả ra ngoài, không lộ Entity qua API
+    Entities/StreakEntry.cs, User.cs # entity thật, không biết EF Core, không biết ai cả
+    Models/StreakEntryModel.cs, UserModel.cs   # DTO trả ra ngoài, không lộ Entity (UserModel không có PasswordHash)
   Streak.Application/
     Abstractions/IApplicationDbContext.cs   # Application chỉ biết interface này, không biết EF Core thật
+    Abstractions/IPasswordService.cs, ITokenService.cs   # băm mật khẩu / phát JWT, Infrastructure cài đặt
     Shared/Result.cs           # Result<T>, Error — thuần, KHÔNG được tham chiếu IResult (ASP.NET Core)
     Shared/Cqrs.cs              # ICommand/IQuery, CommandHandler<,>/QueryHandler<,> (HandleAsync public abstract)
     Shared/ValidationBehavior.cs   # pipeline MediatR, throw ValidationException cho lỗi input
     Features/StreakEntries/
       Commands/CreateStreakEntryCommand(+Validator+Handler)
-      Queries/GetStreakEntryByIdQuery(+Handler), SearchStreakEntriesQuery(+Handler)
+      Queries/SearchStreakEntriesQuery(+Handler)
+    Features/Auth/
+      Commands/RegisterCommand, LoginCommand (+Validator+Handler)
+      Queries/GetCurrentUserQuery(+Handler)
     DependencyInjection.cs      # AddApplication(): AddMediatR + AddValidatorsFromAssemblyContaining
   Streak.Infrastructure/
     StreakDbContext.cs : IApplicationDbContext   # cài đặt interface của Application
-    Entities/StreakEntryConfiguration.cs          # Fluent API, map entity sang bảng SQL
+    Entities/StreakEntryConfiguration.cs, UserConfiguration.cs   # Fluent API, map entity sang bảng SQL (Users.Email unique)
+    Auth/JwtOptions, JwtTokenService, PasswordService   # cài đặt ITokenService / IPasswordService
     DependencyInjection.cs      # AddInfrastructure(config): AddDbContext + đăng ký IApplicationDbContext
   Streak.Migrations/
     StreakDbContextFactory.cs   # IDesignTimeDbContextFactory, chỉ dùng lúc tạo/chạy migration
   Streak.Api/
-    Shared/ResultHttpExtensions.cs   # ToHttpResult/ToCreatedResult/ToFoundResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core
+    Shared/ResultHttpExtensions.cs   # ToHttpResult/ToCreatedResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core
     ValidationExceptionHandler.cs    # bắt ValidationException, đổi thành 400 ValidationProblem
     Features/StreakEntries/StreakEntryEndpoints.cs   # MapStreakEntryApi(), chỉ map route, gọi ISender
+    Features/Auth/AuthEndpoints.cs   # MapAuthApi(): POST /auth/register, POST /auth/login, GET /auth/me (cần token)
     Program.cs
-FE/   (chưa dựng)   # Next.js, xem mục 6
+fe/   # Vite + React (React thuần, không phải Next.js), xem mục 6
 ```
 
 ### Quy tắc phụ thuộc (bắt buộc kiểm tra mỗi khi thêm project reference)
@@ -78,7 +85,16 @@ Mỗi tính năng một thư mục dưới `Features/{Entity}/`, tách `Commands
 
 - Handler không `throw` cho lỗi nghiệp vụ (ví dụ trùng check-in) — trả `Fail(new Error(...))`.
 - `ValidationException` (từ `ValidationBehavior`) là **ngoại lệ duy nhất được throw**, chỉ dùng cho lỗi hình dạng input (FluentValidation), không dùng cho lỗi nghiệp vụ.
-- 3 kiểu chuyển `Result<T>` sang HTTP, chọn theo tình huống: `ToHttpResult()` (200/400 — dùng cho list/search), `ToCreatedResult(prefix)` (201 Created — dùng cho Create), `ToFoundResult()` (200/404/400 — dùng cho GetById, Value null → 404).
+- 2 kiểu chuyển `Result<T>` sang HTTP, chọn theo tình huống: `ToHttpResult()` (200/400 — dùng cho list/search), `ToCreatedResult(prefix)` (201 Created — dùng cho Create).
+
+### Auth (JWT access token)
+
+- `POST /auth/register` và `POST /auth/login` (body: email + mật khẩu, register thêm displayName) trả `{ accessToken, expiresAt, user }`. `GET /auth/me` cần header `Authorization: Bearer <token>`.
+- Mật khẩu chỉ lưu hash (`PasswordHasher` của .NET, PBKDF2). Email lưu chữ thường, unique. Login sai email hay sai mật khẩu đều trả cùng 1 thông báo (không lộ email nào đã đăng ký).
+- Mã lỗi nghiệp vụ → HTTP trong `ResultHttpExtensions`: `Unauthorized`→401, `NotFound`→404, `Conflict`→409, còn lại 400. Handler vẫn chỉ trả `Fail(new Error(code, message))`, không biết HTTP.
+- Khoá ký JWT (`Jwt:Key`, ≥ 32 ký tự) **không đặt trong appsettings**, dev dùng user-secrets (`UserSecretsId` = `streak-api`): `dotnet user-secrets set "Jwt:Key" "<chuỗi ngẫu nhiên>" --project Streak.Api`. Thiếu hoặc ngắn thì app báo lỗi rõ khi khởi động (`ValidateOnStart`). Issuer/Audience/ExpiresMinutes (mặc định `streak-api`/`streak-fe`/60) có thể ghi đè ở section `Jwt`.
+- `MapInboundClaims = false` ở `Program.cs`: claim giữ tên `sub`/`email` (mặc định JwtBearer đổi `sub` thành `ClaimTypes.NameIdentifier`, đọc `"sub"` sẽ ra null → 401 oan).
+- Bảng `Users` **cần migration** (xem mục 4) trước khi register/login chạy được.
 
 ## 4. Database
 
@@ -108,16 +124,43 @@ dotnet run --project Streak.Api
 
 Chạy xong, `GET /streak-entries` sẽ lỗi "Cannot open database Streak" cho đến khi có migration — đây là lỗi đúng dự kiến, không phải lỗi code.
 
-## 6. Frontend (chưa dựng)
+## 6. Frontend
 
-Next.js (App Router), React, TypeScript strict, Tailwind. Tông xanh dương theo mockup (nền `#EEF4FF`, nhấn `#2158F5`), font Bricolage Grotesque (tiêu đề) + DM Sans (nội dung). Chưa có thư mục `FE/` — sẽ bàn kỹ khi bắt đầu.
+**React thuần (Vite + React Router)**, không phải Next.js — đã đổi từ Next.js sang vì không cần SSR/Server Component cho learning goal của FE. TypeScript, Tailwind v4. Thư mục `Streak/fe/` (chữ thường — npm không cho tên package chứa chữ hoa, nên khác `BE`).
+
+- Dựng bằng `npm create vite@latest fe -- --template react-ts`, cài thêm `@tailwindcss/vite` + `tailwindcss` + `react-router-dom`.
+- Toàn bộ là **Client-Side Rendering** — không có server render, không có khái niệm Server/Client Component như Next.js. Mọi component đều chạy trong trình duyệt, mọi API call (`ApiStatus`, sau này các form) đều là browser gọi thẳng `Streak.Api` → **bắt buộc phải có CORS** ở BE (xem bên dưới), khác với lúc dùng Next.js Server Component (lúc đó server-to-server, không cần CORS).
+- Routing bằng `react-router-dom`: route khai báo ở `src/app/router.tsx` (`<Routes>`/`<Route>`), layout chung (`src/components/layout/layout.tsx`, có `<Outlet/>`) bọc `SiteHeader` (`src/components/layout/site-header.tsx`) quanh mọi trang. Không phải file-based routing kiểu Next.js — trang (route) nằm ở `src/app/routes/*.tsx`.
+- **Cấu trúc thư mục FE** theo kiểu [bulletproof-react](https://github.com/alan2207/bulletproof-react) (feature-based), áp từ khi có nhiều component dùng tay cần tổ chức lại:
+  - `src/app/` — `app.tsx` (gộp `AppProvider` + `AppRouter`), `provider.tsx` (context toàn cục: theme, auth modal), `router.tsx` (route), `routes/*.tsx` (1 file/trang, nhận từ `src/pages/` cũ).
+  - `src/features/{feature}/` — mỗi nghiệp vụ 1 thư mục con `components/`, `api/`, `types.ts`, và 1 `index.ts` làm public API (chỗ khác import qua `@/features/{feature}`, không import sâu vào trong). Hiện có `auth/` (modal + form đăng nhập) và `streak-entries/` (gọi `Streak.Api` + hiển thị trạng thái).
+  - `src/components/` — dùng chung, không gắn nghiệp vụ nào: `ui/` (shadcn, xem dưới), `layout/` (header + khung trang), `theme-provider.tsx`, `theme-toggle.tsx`, `reveal.tsx`.
+  - `src/lib/` — `api-client.ts` (hàm `request<T>()` + `ApiError` gọi fetch chung, không biết StreakEntry), `utils.ts` (`cn()` — **đừng tự sửa/di chuyển**, `components.json` của shadcn CLI trỏ cứng vào đường dẫn này).
+  - `src/config/env.ts` — đọc biến môi trường (`VITE_API_URL`...), không đọc `import.meta.env` trực tiếp ở nơi khác.
+  - `src/hooks/` — hook dùng chung (hiện có `use-mobile.ts`, đi theo component `sidebar` của shadcn).
+  - Chưa tạo (để trống có chủ đích, chưa có nội dung thật): `src/stores/` (chưa chọn state library), `src/testing/` (chưa có test project, xem mục 7).
+- **shadcn/ui** (base Radix, style `new-york`) đã cài đủ bộ vào `src/components/ui/` — ưu tiên dùng component có sẵn ở đây (`Button`, `Dialog`, `Accordion`, `Badge`...) thay vì viết `<button>`/`<dialog>` tay. Thêm component mới: `npx shadcn@3.8.5 add <tên>` (ghim bản 3.8.5 — bản `4.x` mới nhất đang lỗi `--all`/preset custom trên máy này). **Không dùng `next-themes`** dù shadcn hay tự thêm làm dependency của `sonner` — đã gỡ, mọi chỗ cần theme phải dùng `useTheme` ở `src/components/theme-provider.tsx`.
+- Màu chốt theo mockup "Dark Alarm" (artifact Design canvas) — amber `#D97706` làm primary, nền tối gần đen mặc định. Token `--secondary` (indigo) đã bỏ vì không dùng ở đâu (xác nhận qua critique `/impeccable`, xem `.impeccable/critique/`). 3 bước leo thang ở Home dùng màu tăng dần: web = amber, email = `--warning` (cam), gọi điện = `--danger` (đỏ) — đúng ý nghĩa "càng lờ đi càng nghiêm trọng".
+- Font: **Be Vietnam Pro** (dùng chung cho cả tiêu đề `font-display` và nội dung `font-sans`, phân biệt bằng weight), nhúng qua Google Fonts `<link>` trong `index.html` (không dùng `next/font`). Đã đổi từ cặp Outfit+Rubik ban đầu vì 2 font đó thiếu glyph dấu tiếng Việt đầy đủ, khiến chữ có dấu bị trình duyệt fallback sang font khác để vẽ dấu → chữ lệch cỡ trong cùng 1 từ. Be Vietnam Pro là font thiết kế riêng cho tiếng Việt, không bị lỗi này.
+- Token màu đặt dạng CSS variable trong `src/index.css` (`--background`, `--card`, `--primary`, `--muted-foreground`...), map qua `@theme inline` sang class Tailwind (`bg-background`, `text-primary`...). Đừng viết thẳng mã hex trong component.
+- **Sáng/Tối**: tự viết (`src/components/theme-provider.tsx`, context + `localStorage` key `streak-theme`), không dùng `next-themes` (gói đó gắn với Next.js). Set class `.dark` lên `<html>` qua 1 script inline nhỏ trong `index.html` (chạy trước khi React mount, tránh nhấp nháy sai theme). Mặc định `dark`, chỉ 2 trạng thái (không có "system"). Component `src/components/theme-toggle.tsx`.
+- **Không có trang Login** — đăng nhập là popup, giờ dùng `Dialog` của shadcn (`src/features/auth/components/auth-modal.tsx`, Radix lo sẵn focus trap/Esc/backdrop/animation, không viết tay nữa). Mọi nút "Đăng nhập"/CTA gọi `useAuthModal().open()` (import qua `@/features/auth`); route lạ (kể cả `/login` cũ) redirect về `/`. Form nằm ở `src/features/auth/components/login-form.tsx` — **UI thật nhưng chưa gọi API**, vì `Streak.Api` chưa có xác thực; submit chỉ hiện thông báo, không giả vờ đăng nhập thành công.
+- **Motion** (đường cong `--ease-out`/`--ease-in-out` ở `index.css`, dùng `ease-(--ease-out)` trong Tailwind, đừng dùng `ease-out` built-in): `.hero-in` (vào trang, stagger bằng `transitionDelay`), `.page-in` (fade khi đổi route, `Layout` gắn key theo pathname + reset scroll), `Reveal` (`wipe` cho card, `rise` cho khối chữ/CTA, chạy 1 lần khi scroll tới), `.press` (nhấn nút), `.notice-enter` (thông báo xuất hiện), animation vào/ra của `Dialog`/`Accordion` (shadcn, từ package `tw-animate-css`, không viết CSS tay nữa), underline trượt ở nav, đổi sáng/tối bằng View Transitions API. Tất cả có nhánh `prefers-reduced-motion`.
+- `src/features/streak-entries/api/streak-entries.ts`: lớp service gọi `Streak.Api` thật (`createStreakEntry`, `searchStreakEntries`, dùng `request<T>()` từ `src/lib/api-client.ts`), có kiểu khớp với `StreakEntryModel`/`SearchStreakEntriesResult` (định nghĩa lại ở `src/features/streak-entries/types.ts`, chưa dùng chung type với BE). Base URL lấy từ `VITE_API_URL` qua `src/config/env.ts` (`.env.local`, mặc định `http://localhost:5090`). `src/features/streak-entries/components/api-status.tsx` (`Badge` shadcn) gọi `searchStreakEntries` thật lúc load trang Home (qua `useEffect`, vì giờ luôn là browser gọi), để lộ ngay nếu BE/CORS/DB có vấn đề — không fake dữ liệu.
+- BE phải mở CORS cho `http://localhost:3000` (`Program.cs`, policy `"Fe"`) thì FE mới gọi được từ trình duyệt. Vite được cấu hình chạy cổng 3000 (`vite.config.ts`, `server.port`) để khớp đúng policy này — đụng tới port FE thì sửa cả 2 chỗ.
+- Alias import `@/*` → `src/*`, khai báo ở cả `vite.config.ts` (`resolve.alias`) và `tsconfig.app.json` (`paths`).
+- Lệnh: `cd Streak/fe && npm run dev` (cổng 3000), `npm run build`.
 
 ## 7. Việc còn thiếu / TODO đã biết
 
-- `.RequireAuthorization()` **chưa gọi** ở `StreakEntryEndpoints` (chỉ có comment TODO) — vì chưa có auth scheme nào cấu hình, gọi thật sẽ chặn hết request. Thêm khi có hệ thống auth.
+- `.RequireAuthorization()` **chưa gọi** ở `StreakEntryEndpoints` (chỉ có comment TODO). Auth JWT đã có, nhưng FE chưa gửi token (login mới là giao diện) và badge trạng thái Home đang gọi `GET /streak-entries` không token, nên bật bây giờ sẽ làm badge báo 401. Bật cùng lúc nối FE login.
 - `StreakEntryModel` (Domain) hiện là DTO thật đang được dùng để trả ra API (không lộ Entity) — đã nối đúng, không phải khung chờ.
 - Entity nghiệp vụ thật (`Reminder`, `User`, `ReminderChannel`, streak/thống kê thật) chưa viết — `StreakEntry` chỉ là bài tập dựng khung.
-- Chưa có test project, chưa `git init`, chưa `.gitignore` áp dụng cho `Streak/BE` (có `.gitignore` ở gốc repo, kiểm tra lại có khớp cấu trúc hiện tại không trước khi commit).
+- Chưa có test project (cả BE và FE).
+- Repo đã `git init` và nối remote `https://github.com/DuyNM0601/Streak.git` (branch `main`). `Streak/fe/` chưa commit lần nào.
+- FE popup đăng nhập chỉ là giao diện, chưa gọi API thật. BE đã có `/auth/register`, `/auth/login`, `/auth/me`; còn thiếu: migration bảng `Users`, nối form FE, lưu token phía FE.
+- Chưa có migration cho bảng `Users` (chỉ tạo khi được yêu cầu, xem mục 4).
+- Đã có `src/features/streak-entries/api/streak-entries.ts` gọi 2 endpoint `/streak-entries` thật (POST, GET list), và badge trạng thái trên Home gọi `searchStreakEntries` thật — hiện báo lỗi 500 vì chưa chạy migration (đúng dự kiến, không phải lỗi code, xem mục 4).
 
 ## 8. Cách làm việc với Claude
 
@@ -126,3 +169,4 @@ Next.js (App Router), React, TypeScript strict, Tailwind. Tông xanh dương the
 - Không tự chạy `dotnet ef database update` hoặc tạo migration khi chưa được yêu cầu rõ.
 - Không thêm NuGet package mới khi chưa hỏi, trừ khi để sửa lỗi build (ví dụ ghim bản vá lỗ hổng bảo mật transitive).
 - Không commit secret/connection string có mật khẩu thật. Hiện dùng Windows Auth nên không có mật khẩu nào trong code.
+- Không tự `git commit` hoặc `git push` — người dùng tự làm. Chỉ đưa tên nhánh/commit message và lệnh git khi người dùng **hỏi**; nếu không hỏi thì không tự đề xuất.
