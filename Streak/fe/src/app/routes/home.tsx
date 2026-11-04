@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuthModal } from "@/features/auth";
-import { ApiStatus } from "@/features/streak-entries";
 import { Reveal } from "@/components/reveal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,9 +85,6 @@ export function HomePage() {
             >
               <Link to="/guide">Xem cách dùng</Link>
             </Button>
-          </div>
-          <div className="hero-in mt-6 flex justify-center" style={{ transitionDelay: "240ms" }}>
-            <ApiStatus />
           </div>
         </div>
       </section>

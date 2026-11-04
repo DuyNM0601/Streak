@@ -5,7 +5,6 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Streak.Api;
 using Streak.Api.Features.Auth;
-using Streak.Api.Features.StreakEntries;
 using Streak.Application;
 using Streak.Infrastructure;
 using Streak.Infrastructure.Auth;
@@ -60,6 +59,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapAuthApi();
-app.MapStreakEntryApi();
 
 app.Run();

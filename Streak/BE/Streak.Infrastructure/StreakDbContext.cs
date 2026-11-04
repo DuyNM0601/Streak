@@ -6,8 +6,6 @@ namespace Streak.Infrastructure;
 
 public class StreakDbContext(DbContextOptions<StreakDbContext> options) : DbContext(options), IApplicationDbContext
 {
-    public DbSet<StreakEntry> StreakEntries => Set<StreakEntry>();
-
     public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -19,11 +17,6 @@ public class StreakDbContext(DbContextOptions<StreakDbContext> options) : DbCont
     public override Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
-        foreach (var entry in ChangeTracker.Entries<StreakEntry>())
-        {
-            if (entry.State == EntityState.Added) entry.Entity.CreatedAt = now;
-            if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = now;
-        }
         foreach (var entry in ChangeTracker.Entries<User>())
         {
             if (entry.State == EntityState.Added) entry.Entity.CreatedAt = now;
