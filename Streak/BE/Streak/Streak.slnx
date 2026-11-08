@@ -1,1 +1,6 @@
-<Solution />
+<Solution>
+  <Project Path="Streak.API/Streak.API.csproj" />
+  <Project Path="Streak.Application/Streak.Application.csproj" />
+  <Project Path="Streak.Domain/Streak.Domain.csproj" />
+  <Project Path="Streak.Infrasture/Streak.Infrastructure.csproj" />
+</Solution>
