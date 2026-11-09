@@ -4,31 +4,36 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --card: #f8fafc;
-  --border: #e2e8f0;
-  --foreground: #0f172a;
-  --muted-foreground: #475569;
-  --primary: #b45309;
+  /* Thế giới "tờ lịch bloc": nền là bức tường (vôi xanh ban ngày, ám khói ban đêm), nội dung nằm trên
+     các tờ giấy (.paper) luôn sáng ở cả hai chế độ, mực đen, số đỏ son. */
+  --background: #ccdacf;
+  --foreground: #14201a;
+  --card: #fbf8ee;
+  --card-foreground: #1a1714;
+  --border: rgba(20, 32, 26, 0.2);
+  --muted-foreground: #34443a;
+  --primary: #c8321f;
   --primary-foreground: #ffffff;
-  --accent: #fde68a;
-  --accent-foreground: #92400e;
-  --success: #15803d;
-  --success-bg: #dcfce7;
-  --warning: #92400e;
-  --warning-bg: #fef3c7;
-  --danger: #dc2626;
-  --danger-bg: #fee2e2;
-  --radius: 0.625rem;
-  --card-foreground: #0f172a;
-  --popover: #f8fafc;
-  --popover-foreground: #0f172a;
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --input: #e2e8f0;
-  --ring: #b45309;
+  --accent: #f3e7b3;
+  --accent-foreground: #6e1d10;
+  --success: #2f7a45;
+  --success-bg: #dcefe1;
+  --warning: #8a4b00;
+  --warning-bg: #fbebcb;
+  --danger: #a8281a;
+  --danger-bg: #fbe3df;
+  --radius: 0.5rem;
+  /* Mực và đỏ son in trên tờ giấy: hằng số ở cả sáng lẫn tối vì giấy luôn sáng. */
+  --ink: #1a1714;
+  --calendar-red: #c8321f;
+  --popover: #fbf8ee;
+  --popover-foreground: #1a1714;
+  --secondary: #bfcfc3;
+  --secondary-foreground: #14201a;
+  --muted: #bfcfc3;
+  --destructive: #a8281a;
+  --input: rgba(20, 32, 26, 0.2);
+  --ring: #c8321f;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -45,30 +50,30 @@
 }
 
 .dark {
-  --background: #0f172a;
-  --card: #192134;
-  --border: rgba(255, 255, 255, 0.08);
-  --foreground: #ffffff;
-  --muted-foreground: #94a3b8;
-  --primary: #d97706;
-  --primary-foreground: #0f172a;
-  --accent: rgba(217, 119, 6, 0.16);
-  --accent-foreground: #fbbf24;
-  --success: #22c55e;
-  --success-bg: rgba(34, 197, 94, 0.14);
-  --warning: #fb923c;
-  --warning-bg: rgba(249, 115, 22, 0.14);
-  --danger: #f87171;
-  --danger-bg: rgba(239, 68, 68, 0.14);
-  --card-foreground: #ffffff;
-  --popover: #192134;
-  --popover-foreground: #ffffff;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --input: rgba(255, 255, 255, 0.08);
-  --ring: #d97706;
+  --background: #16100e;
+  --foreground: #f3ecdd;
+  --card: #efe8d8;
+  --card-foreground: #1a1714;
+  --border: rgba(243, 236, 221, 0.16);
+  --muted-foreground: #b9ad9a;
+  --primary: #d63a24;
+  --primary-foreground: #ffffff;
+  --accent: rgba(214, 58, 36, 0.18);
+  --accent-foreground: #f0a090;
+  --success: #4fbf6b;
+  --success-bg: rgba(79, 191, 107, 0.14);
+  --warning: #f0a24a;
+  --warning-bg: rgba(240, 162, 74, 0.14);
+  --danger: #f06f5e;
+  --danger-bg: rgba(240, 111, 94, 0.14);
+  --popover: #efe8d8;
+  --popover-foreground: #1a1714;
+  --secondary: #2a201c;
+  --secondary-foreground: #f3ecdd;
+  --muted: #2a201c;
+  --destructive: #f06f5e;
+  --input: rgba(243, 236, 221, 0.2);
+  --ring: #e5533d;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -97,6 +102,8 @@
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--muted-foreground);
   --color-primary: var(--primary);
+  --color-ink: var(--ink);
+  --color-calendar-red: var(--calendar-red);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
@@ -108,6 +115,7 @@
   --color-danger-bg: var(--danger-bg);
   --font-sans: "Be Vietnam Pro", sans-serif;
   --font-display: "Be Vietnam Pro", sans-serif;
+  --font-numeral: "Anton", "Be Vietnam Pro", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -140,8 +148,14 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
+  /* Bức tường: vài vết loang lớn của lớp vôi (gradient, không tile nên không có đường nối) + hạt mịn rất nhẹ. */
+  background-image:
+    radial-gradient(ellipse 60% 35% at 15% 18%, rgb(255 255 255 / 0.07), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 55%, rgb(0 0 0 / 0.08), transparent 70%),
+    radial-gradient(ellipse 45% 30% at 40% 88%, rgb(255 255 255 / 0.05), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 /* Reveal khi cuộn tới — chỉ dùng cho mặt hàng marketing (Home, Guide), không dùng cho UI thao tác
@@ -424,5 +438,164 @@ html {
   [data-slot="dialog-overlay"],
   [data-slot="dialog-content"] {
     animation: none;
+  }
+}
+
+/* ---------- Tờ lịch bloc ---------- */
+
+/* Tờ giấy: luôn sáng ở cả hai chế độ nên khai báo lại biến màu cho mọi thứ nằm trên nó (chữ phụ, viền,
+   trạng thái) thay vì dùng màu của bức tường. */
+.paper {
+  --background: #fbf8ee;
+  --foreground: var(--ink);
+  --muted-foreground: #5a5046;
+  --border: rgba(26, 23, 20, 0.18);
+  --input: rgba(26, 23, 20, 0.22);
+  --success: #2f7a45;
+  --success-bg: #dcefe1;
+  --warning: #8a4b00;
+  --warning-bg: #fbebcb;
+  --danger: #a8281a;
+  --danger-bg: #fbe3df;
+  --ring: var(--calendar-red);
+  background-color: #fbf8ee;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .08 0 0 0 0 .06 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  color: var(--ink);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.6) inset,
+    0 22px 30px -18px rgb(10 6 4 / 0.55),
+    0 6px 10px -4px rgb(10 6 4 / 0.25);
+}
+
+.dark .paper {
+  background-color: #efe8d8;
+}
+
+/* Dải đỏ trên cùng của tờ lịch, lỗ treo bên trái và đường răng cưa xé phía dưới dải. */
+.sheet-band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 2.5rem;
+  background: var(--calendar-red);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sheet-band::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  translate: 0 -50%;
+  border-radius: 999px;
+  background: var(--background);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+.sheet-tear {
+  height: 0.5rem;
+  background-image: radial-gradient(circle at 50% 0, rgb(26 23 20 / 0.3) 1.2px, transparent 1.8px);
+  background-size: 9px 8px;
+}
+
+/* Số trên tờ lịch: Anton chỉ có 1 độ đậm nên giữ font-normal để không bị tạo chữ đậm giả. */
+.numeral {
+  font-family: var(--font-numeral);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Xé tờ: tờ trên cùng nhấc mép, xoay quanh góc trái rồi rơi xuống; tờ dưới (cùng vị trí) lộ ra. */
+.sheet-leaf {
+  transform-origin: 14% 0;
+}
+
+.sheet-leaf[data-tearing] {
+  animation: tear-off 700ms var(--ease-in-out) forwards;
+}
+
+@keyframes tear-off {
+  0% {
+    transform: rotate(0deg);
+  }
+  28% {
+    transform: rotate(-3deg) translateY(-8px);
+  }
+  100% {
+    transform: rotate(16deg) translate(22%, 125%);
+  }
+}
+
+/* Nét bút đỏ vẽ tay (SVG): hiện dần từ trái sang phải bằng clip-path (không dùng dash vì nét SVG đang
+   non-scaling-stroke). Trong section Reveal thì chờ section hiện mới vẽ; ở nơi khác (hero) tự vẽ khi
+   mount nhờ @starting-style. Inset âm để đầu nét không bị cắt. */
+.pen {
+  clip-path: inset(-6px);
+  transition: clip-path 700ms var(--ease-out) var(--pen-delay, 300ms);
+
+  @starting-style {
+    clip-path: inset(-6px 100% -6px -6px);
+  }
+}
+
+.reveal-section .pen {
+  clip-path: inset(-6px 100% -6px -6px);
+}
+
+.reveal-section[data-visible] .pen {
+  clip-path: inset(-6px);
+}
+
+/* Các tờ lịch rơi xuống treo vào chỗ khi section hiện ra (mỗi tờ có độ nghiêng riêng --tilt). */
+.sheet-drop {
+  opacity: 0;
+  transform: translateY(-28px) rotate(calc(var(--tilt, 0deg) - 3deg));
+  transform-origin: 50% 0;
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+
+.reveal-section[data-visible] .sheet-drop {
+  opacity: 1;
+  transform: rotate(var(--tilt, 0deg));
+}
+
+::selection {
+  background: var(--calendar-red);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-leaf[data-tearing] {
+    animation: none;
+  }
+
+  .pen {
+    transition: none;
+  }
+
+  .reveal-section .pen {
+    clip-path: inset(-6px);
+  }
+
+  .sheet-drop {
+    transform: rotate(var(--tilt, 0deg));
+    transition: opacity 200ms ease;
   }
 }

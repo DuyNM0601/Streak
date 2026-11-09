@@ -22,7 +22,7 @@ export function ThemeToggle() {
       size="icon"
       onClick={handleClick}
       aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-      className="relative rounded-full border-border bg-card hover:border-primary hover:bg-card"
+      className="relative rounded-full border-foreground/35 bg-transparent text-foreground hover:bg-foreground/10 hover:text-foreground dark:border-foreground/35 dark:bg-transparent dark:hover:bg-foreground/10"
     >
       <MoonIcon
         className="absolute size-[18px] transition-[opacity,transform] duration-200 ease-(--ease-out) motion-reduce:transition-opacity"

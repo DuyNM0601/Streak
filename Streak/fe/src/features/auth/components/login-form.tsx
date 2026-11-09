@@ -1,56 +1,51 @@
 import { useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { googleClientId } from "@/config/env";
+import { ApiError } from "@/lib/api-client";
+import { googleLogin } from "../api/google-login";
+import { useAuth } from "./auth-provider";
 
-export function LoginForm() {
+export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+  const { signIn } = useAuth();
   const [notice, setNotice] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    // Streak.Api chưa có hệ thống xác thực (xem CLAUDE.md mục 7) - báo rõ, không giả vờ đăng nhập thành công.
-    setNotice("Streak chưa nối máy chủ xác thực. Form này chỉ là giao diện.");
+  async function handleCredential(idToken?: string) {
+    if (!idToken) {
+      setNotice("Google không trả về thông tin đăng nhập. Hãy thử lại.");
+      return;
+    }
+    try {
+      signIn(await googleLogin(idToken));
+      onSuccess();
+    } catch (e) {
+      setNotice(
+        e instanceof ApiError && e.status === 401
+          ? "Tài khoản Google không hợp lệ hoặc đã bị xoá."
+          : "Không đăng nhập được, máy chủ đang gặp lỗi. Hãy thử lại sau.",
+      );
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          placeholder="ban@gmail.com"
-          className="h-11 rounded-xl"
+    <div className="mt-6 flex flex-col items-start gap-4">
+      {googleClientId ? (
+        <GoogleLogin
+          onSuccess={(res) => handleCredential(res.credential)}
+          onError={() => setNotice("Đăng nhập Google thất bại. Hãy thử lại.")}
+          shape="pill"
+          size="large"
+          width="300"
         />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Mật khẩu</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          autoComplete="current-password"
-          className="h-11 rounded-xl"
-        />
-        <span className="text-xs text-muted-foreground">Ít nhất 8 ký tự</span>
-      </div>
-
-      <Button type="submit" className="mt-2 h-11 rounded-xl text-sm font-semibold">
-        Đăng nhập
-      </Button>
+      ) : (
+        <p className="text-sm text-muted-foreground">Chưa cấu hình VITE_GOOGLE_CLIENT_ID trong .env.local.</p>
+      )}
 
       {notice && (
         <Alert className="notice-enter rounded-xl border-warning/30 bg-warning-bg">
           <AlertDescription className="text-warning">{notice}</AlertDescription>
         </Alert>
       )}
-    </form>
+    </div>
   );
 }

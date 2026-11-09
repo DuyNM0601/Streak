@@ -17,28 +17,17 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
     <AuthModalContext.Provider value={{ open }}>
       {children}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-sm rounded-2xl p-8">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="13" r="8" />
-              <path d="M12 9v4l2.5 2M9 2.5h6" />
-            </svg>
-          </span>
-          <DialogHeader className="gap-1">
-            <DialogTitle className="font-display text-2xl font-bold">Đăng nhập</DialogTitle>
-            <DialogDescription>Đăng nhập để tạo và quản lý nhắc nhở của bạn.</DialogDescription>
-          </DialogHeader>
-          <LoginForm key={session} />
+        {/* Popup là một tờ lịch: dải đỏ có lỗ treo, đường xé, rồi thân giấy. */}
+        <DialogContent className="paper max-w-sm gap-0 overflow-hidden rounded-md border-0 p-0 [&>button]:text-white [&>button]:opacity-90">
+          <div className="sheet-band">Streak</div>
+          <div className="sheet-tear" aria-hidden="true" />
+          <div className="px-8 pb-8 pt-6">
+            <DialogHeader className="gap-1 text-left">
+              <DialogTitle className="font-display text-2xl font-extrabold tracking-tight">Đăng nhập</DialogTitle>
+              <DialogDescription>Đăng nhập để tạo và quản lý nhắc nhở của bạn.</DialogDescription>
+            </DialogHeader>
+            <LoginForm key={session} onSuccess={() => setIsOpen(false)} />
+          </div>
         </DialogContent>
       </Dialog>
     </AuthModalContext.Provider>

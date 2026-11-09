@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { useAuthModal } from "@/features/auth";
+import { useAuth, useAuthModal } from "@/features/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
@@ -9,20 +9,22 @@ const navLink =
 
 export function SiteHeader() {
   const { open } = useAuthModal();
+  const { session, signOut } = useAuth();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
-        <Link to="/" className="flex items-center gap-2 font-display text-lg font-semibold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="13" r="8" />
-              <path d="M12 9v4l2.5 2M9 2.5h6" />
-            </svg>
-          </span>
+    <header className="sticky top-0 z-10 border-b border-border bg-background">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
+        <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-extrabold tracking-tight">
+          {/* Biểu tượng: tờ lịch nhỏ, dải đỏ + lỗ treo */}
+          <svg width="26" height="28" viewBox="0 0 26 28" aria-hidden="true">
+            <rect x="1" y="1" width="24" height="26" rx="2.5" className="fill-card" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M1 3.5A2.5 2.5 0 0 1 3.5 1h19A2.5 2.5 0 0 1 25 3.5V9H1V3.5Z" className="fill-calendar-red" />
+            <circle cx="6" cy="5" r="1.3" className="fill-card" />
+            <path d="M8 21 11.5 14l2.6 4.6 2-3.1L18.5 21" fill="none" className="stroke-ink" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
           Streak
         </Link>
-        <nav aria-label="Điều hướng chính" className="hidden items-center gap-6 text-sm font-medium text-muted-foreground sm:flex">
+        <nav aria-label="Điều hướng chính" className="hidden items-center gap-6 text-sm font-semibold text-muted-foreground sm:flex">
           <NavLink to="/" end className={({ isActive }) => `${navLink} ${isActive ? "text-foreground after:scale-x-100" : ""}`}>
             Trang chủ
           </NavLink>
@@ -31,9 +33,23 @@ export function SiteHeader() {
           </NavLink>
         </nav>
         <div className="flex items-center gap-3">
-          <Button type="button" onClick={open} className="h-10 rounded-full px-5 text-sm font-semibold">
-            Đăng nhập
-          </Button>
+          {session ? (
+            <>
+              <span className="hidden max-w-40 truncate text-sm font-semibold sm:inline">{session.displayName}</span>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={signOut}
+                className="h-10 rounded-full border-foreground/35 bg-transparent px-5 text-sm font-semibold text-foreground hover:bg-foreground/10 hover:text-foreground dark:border-foreground/35 dark:bg-transparent dark:hover:bg-foreground/10"
+              >
+                Đăng xuất
+              </Button>
+            </>
+          ) : (
+            <Button type="button" onClick={open} className="h-10 rounded-full px-5 text-sm font-semibold">
+              Đăng nhập
+            </Button>
+          )}
           <ThemeToggle />
         </div>
       </div>
