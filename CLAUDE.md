@@ -6,7 +6,7 @@ Người dùng nói chuyện bằng tiếng Việt. Trả lời, comment giải 
 
 - Dự án: Streak, web giúp người dùng giữ kỷ luật cá nhân (dậy sớm, học bài, làm việc, bỏ game...) bằng nhắc nhở đúng giờ qua thông báo web, email và gọi điện. Nếu chưa xác nhận thì hệ thống leo thang sang kênh mạnh hơn.
 - Tác giả: Nguyễn Mạnh Duy. Dự án cá nhân, **mục đích chính là học Clean Architecture + CQRS để đi phỏng vấn**, không chỉ để chạy sản phẩm.
-- Entity thật của Streak (`Reminder`, `ReminderChannel`...) **chưa được dựng**. Hiện chỉ có `User` + auth JWT (xem mục 3). Entity `StreakEntry` (bài tập dựng khung ban đầu) đã xoá. Khi bắt đầu nghiệp vụ thật, copy đúng cấu trúc `Features/Auth/` làm mẫu.
+- Entity thật của Streak (`Reminder`, `ReminderChannel`...) **chưa được dựng**. Hiện chỉ có `User`, `RefreshToken` + auth Google/JWT (xem mục 3). Entity `StreakEntry` (bài tập dựng khung ban đầu) đã xoá. Khi bắt đầu nghiệp vụ thật, copy đúng cấu trúc `Features/Auth/` làm mẫu.
 - Mockup giao diện và sơ đồ kiến trúc nằm ở artifact Claude "Kairo Mockup" / "Kairo Kiến trúc" (tên cũ của dự án, hiểu là Streak) — chỉ để tham khảo ý tưởng sản phẩm, không phải kiến trúc code (kiến trúc đã đổi nhiều lần sau đó, mục này mới là bản đúng).
 
 ## 2. Công nghệ
@@ -14,96 +14,89 @@ Người dùng nói chuyện bằng tiếng Việt. Trả lời, comment giải 
 - .NET 10, C#, ASP.NET Core **Minimal API** (không dùng Controller)
 - EF Core 10 + SQL Server
 - **MediatR 12.0.1** cho CQRS — ghim đúng bản này, vì từ bản 13.0 (7/2025) MediatR chuyển sang licence kép (RPL 1.5 / thương mại qua công ty Lucky Penny Software của Jimmy Bogard). 12.0.1 là bản Apache 2.0 thuần, không có vấn đề licence, dù không còn fix mới.
-- FluentValidation 12.2.0
-- Auth: `Microsoft.IdentityModel.JsonWebTokens` (Infrastructure, ký JWT), `Microsoft.Extensions.Identity.Core` (Infrastructure, chỉ lấy `PasswordHasher` để băm mật khẩu, KHÔNG dùng ASP.NET Identity đầy đủ). Chưa có `JwtBearer` vì chưa có endpoint nào cần bảo vệ — thêm khi cần.
+- Chưa dùng FluentValidation (input được kiểm trong handler, trả `Fail(field, message)`).
+- Auth: `Google.Apis.Auth` (kiểm Google ID token), `Microsoft.IdentityModel.JsonWebTokens` (Infrastructure, ký JWT), `Microsoft.AspNetCore.Authentication.JwtBearer` (API, kiểm access token).
 - `Microsoft.AspNetCore.OpenApi` (sinh tài liệu OpenAPI JSON mặc định của .NET) + `Scalar.AspNetCore` (giao diện thử API tại `/scalar`, chỉ bật ở Development). Không dùng Swashbuckle — Microsoft đã bỏ nó khỏi template từ .NET 9.
 
 ## 3. Kiến trúc: Clean Architecture + Vertical Slice + CQRS/MediatR
 
-5 project .NET, mô phỏng theo kiến trúc một codebase thật (nội bộ, không phải tài liệu công khai) tên "OrderHub". **Không dùng Repository pattern** — Application gọi qua `IApplicationDbContext`.
+4 project .NET (thư mục BE: `Streak/BE/Streak/`), mô phỏng theo kiến trúc một codebase thật tên "OrderHub". **Không dùng Repository pattern** — Application gọi qua `IAppDbContext`. Tên thư mục Infrastructure đang viết là `Streak.Infrasture` (thiếu chữ t), project vẫn là `Streak.Infrastructure`.
 
 ```
-Streak/BE/
+Streak/BE/Streak/
   Streak.slnx
-  Directory.Build.props      # TargetFramework net10.0, Nullable, ImplicitUsings
-  Directory.Packages.props   # khoá version NuGet tập trung (Central Package Management)
   Streak.Domain/
-    Entities/User.cs                 # entity thật, không biết EF Core, không biết ai cả
+    Entities/BaseEntity, IAuditable, ISoftDelete, User, RefreshToken   # không biết EF Core, không biết ai cả
   Streak.Application/
-    Abstractions/IApplicationDbContext.cs   # Application chỉ biết interface này, không biết EF Core thật
-    Abstractions/IPasswordService.cs, ITokenService.cs   # băm mật khẩu / phát JWT, Infrastructure cài đặt
-    Shared/Result.cs           # Result<T>, Error — thuần, KHÔNG được tham chiếu IResult (ASP.NET Core)
-    Shared/Cqrs.cs              # ICommand/IQuery, CommandHandler<,>/QueryHandler<,> (HandleAsync public abstract)
-    Shared/ValidationBehavior.cs   # pipeline MediatR, throw ValidationException cho lỗi input
+    Common/IAppDbContext, ITokenService, IGoogleTokenVerifier   # interface Application cần, Infrastructure cài đặt
+    Shared/Result.cs           # Result<T>, Error(ErrorType, Code, Message) — thuần, KHÔNG tham chiếu IResult (ASP.NET Core)
+    Shared/Cqrs.cs             # ICommand<T>, CommandHandler<,> (HandleAsync public abstract, Ok/Fail)
     Features/Auth/
-      Commands/RegisterCommand, LoginCommand (+Validator+Handler)
-    DependencyInjection.cs      # AddApplication(): AddMediatR + AddValidatorsFromAssemblyContaining
-  Streak.Infrastructure/
-    StreakDbContext.cs : IApplicationDbContext   # cài đặt interface của Application
-    Entities/UserConfiguration.cs    # Fluent API, map entity sang bảng SQL (Users.Email unique)
-    Auth/JwtOptions, JwtTokenService, PasswordService   # cài đặt ITokenService / IPasswordService
-    DependencyInjection.cs      # AddInfrastructure(config): AddDbContext + đăng ký IApplicationDbContext
-  Streak.Migrations/
-    StreakDbContextFactory.cs   # IDesignTimeDbContextFactory, chỉ dùng lúc tạo/chạy migration
-  Streak.Api/
-    Shared/ResultHttpExtensions.cs   # ToHttpResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core; map Error.Code sang 401/404/409/400
-    ValidationExceptionHandler.cs    # bắt ValidationException, đổi thành 400 ValidationProblem
-    Features/Auth/AuthEndpoints.cs   # MapAuthApi(): POST /auth/register, POST /auth/login
+      Commands/GoogleLogin, RefreshToken, Logout (Command + Handler)
+      Models/AuthModel.cs      # model trả về client, không lộ Entity
+      AuthIssuer.cs            # dùng chung: phát access token + refresh token mới
+    DependencyInjections.cs    # AddApplication(): AddMediatR
+  Streak.Infrasture/           # project Streak.Infrastructure
+    Data/AppDbContext.cs : IAppDbContext
+    Migrations/                # migration nằm ngay đây
+    Auth/JwtOptions, JwtTokenService, GoogleOptions, GoogleTokenVerifier
+    DependencyInjections.cs    # AddInfrastructure(config)
+  Streak.API/
+    Shared/ResultHttpExtensions.cs   # ToHttpResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core
+    Features/Auth/AuthEndpoints.cs   # MapAuthApi(): /auth/google, /refresh, /logout, /me
     Program.cs
-fe/   # Vite + React (React thuần, không phải Next.js), xem mục 6
+Streak/fe/   # Vite + React (React thuần, không phải Next.js), xem mục 6
 ```
 
 ### Quy tắc phụ thuộc (bắt buộc kiểm tra mỗi khi thêm project reference)
 
 ```
-Domain  ←  Application  ←  Infrastructure  ←  Migrations
-                ↑                                  ↑
-                └──────────────── Api ──────────────┘
+Domain  ←  Application  ←  Infrastructure
+                ↑                 ↑
+                └──── API ────────┘
 ```
 
 - `Domain`: không tham chiếu project nào, không biết EF Core, không biết ASP.NET Core.
-- `Application`: chỉ tham chiếu `Domain`. Được dùng `Microsoft.EntityFrameworkCore` (gói gốc, chỉ để có kiểu `DbSet<T>` trong `IApplicationDbContext`) và `Microsoft.Extensions.Logging.Abstractions` (`ILogger` — đây là abstraction logging thuần, không phải ASP.NET Core, được phép dùng ở lớp trong). **Không được dùng `Microsoft.AspNetCore.*` ở đây** — kể cả `IResult`. Đây là lỗi thật tôi từng mắc (để `ToHttpResult()` lẫn vào `Shared/Result.cs` của Application) và phải sửa lại.
-- `Infrastructure`: tham chiếu `Application` + `Domain`, cài đặt `IApplicationDbContext`.
-- `Migrations`: tham chiếu `Infrastructure`. Chỉ chứa `IDesignTimeDbContextFactory`, không chứa gì khác.
-- `Api`: tham chiếu `Application`, `Infrastructure`, `Migrations`. Là nơi **duy nhất** được biết `IResult`, `HttpContext`, đăng ký DI.
+- `Application`: chỉ tham chiếu `Domain`. Được dùng `Microsoft.EntityFrameworkCore` (chỉ để có kiểu `DbSet<T>` trong `IAppDbContext`), `MediatR` và `Microsoft.Extensions.Logging.Abstractions`. **Không được dùng `Microsoft.AspNetCore.*` ở đây** — kể cả `IResult`. Đây là lỗi thật từng mắc (để `ToHttpResult()` lẫn vào Application) và phải sửa lại.
+- `Infrastructure`: tham chiếu `Application` (+ `Domain` qua Application), cài đặt `IAppDbContext`, `ITokenService`, `IGoogleTokenVerifier`.
+- `API`: tham chiếu `Application`, `Infrastructure`. Là nơi **duy nhất** được biết `IResult`, `HttpContext`, cookie, đăng ký DI.
 
 ### Vertical Slice bên trong Application
 
 Mỗi tính năng một thư mục dưới `Features/{Entity}/`, tách `Commands/` và `Queries/`. Khi thêm tính năng mới, copy đúng khuôn `Features/Auth/`:
-- `{Action}{Entity}Command` hoặc `Query`, implement `ICommand<TResult>`/`IQuery<TResult>`.
-- `{CommandOrQuery}Handler` kế thừa `CommandHandler<,>`/`QueryHandler<,>`, override `HandleAsync` (public abstract), nhận `IApplicationDbContext` qua constructor.
-- Command có validator thì thêm `{Command}Validator : AbstractValidator<T>`.
-- `Streak.Api/Features/{Entity}/{Entity}Endpoints.cs` — method `Map{Entity}Api()`, chỉ gọi `ISender`, không chứa logic.
+- `{Action}{Entity}Command` (record) implement `ICommand<TResult>`.
+- `{Command}Handler` kế thừa `CommandHandler<,>`, override `HandleAsync`, nhận `IAppDbContext` qua constructor.
+- `Streak.API/Features/{Entity}/{Entity}Endpoints.cs` — method `Map{Entity}Api()`, chỉ gọi `ISender`, không chứa logic nghiệp vụ.
 
 ### Result pattern
 
-- Handler không `throw` cho lỗi nghiệp vụ (ví dụ email đã đăng ký) — trả `Fail(new Error(...))`.
-- `ValidationException` (từ `ValidationBehavior`) là **ngoại lệ duy nhất được throw**, chỉ dùng cho lỗi hình dạng input (FluentValidation), không dùng cho lỗi nghiệp vụ.
-- Chuyển `Result<T>` sang HTTP bằng `ToHttpResult()` (200 khi thành công; lỗi map theo `Error.Code`: `Unauthorized` 401, `NotFound` 404, `Conflict` 409, còn lại 400).
+- Handler không `throw` cho lỗi nghiệp vụ — trả `Fail(Error.Unauthorized(...))` / `Fail(field, message)` (lỗi input).
+- Chuyển `Result<T>` sang HTTP bằng `ToHttpResult()` duy nhất: 200 khi thành công; `Validation` → 400 `ValidationProblem` (errors theo field), `Unauthorized` 401, `NotFound` 404, `Conflict` 409 (ProblemDetails có `code`). Lỗi chưa bắt đi qua `UseExceptionHandler()` + `UseStatusCodePages()`. Thông báo lỗi API dùng tiếng Anh.
 
-### Auth (JWT access token)
+### Auth: đăng nhập Google + access token + refresh token
 
-- `POST /auth/register` và `POST /auth/login` (body: email + mật khẩu, register thêm displayName) trả `{ accessToken, expiresAt, userId, email, displayName }` (`AuthResult`, không có PasswordHash). Chỉ phát token, chưa có endpoint nào kiểm token.
-- Mật khẩu chỉ lưu hash (`PasswordHasher` của .NET, PBKDF2). Email lưu chữ thường, unique. Login sai email hay sai mật khẩu đều trả cùng 1 thông báo (không lộ email nào đã đăng ký).
-- Mã lỗi nghiệp vụ → HTTP trong `ResultHttpExtensions`: `Unauthorized`→401, `NotFound`→404, `Conflict`→409, còn lại 400. Handler vẫn chỉ trả `Fail(new Error(code, message))`, không biết HTTP.
-- Khoá ký JWT (`Jwt:Key`, ≥ 32 ký tự) **không đặt trong appsettings**, dev dùng user-secrets (`UserSecretsId` = `streak-api`): `dotnet user-secrets set "Jwt:Key" "<chuỗi ngẫu nhiên>" --project Streak.Api`. Thiếu hoặc ngắn thì app báo lỗi rõ khi khởi động (`ValidateOnStart`). Issuer/Audience/ExpiresMinutes (mặc định `streak-api`/`streak-fe`/60) có thể ghi đè ở section `Jwt`.
-- Khi thêm `JwtBearer` để bảo vệ endpoint: đặt `MapInboundClaims = false` nếu muốn đọc claim `sub`/`email` đúng tên (mặc định JwtBearer đổi `sub` thành `ClaimTypes.NameIdentifier`, đọc `"sub"` sẽ ra null → 401 oan). Token ký trong `JwtTokenService` có claim `sub`/`email`/`name`.
-- Bảng `Users` **cần migration** (xem mục 4) trước khi register/login chạy được.
+- Chỉ có đăng nhập Google (không có mật khẩu). FE lấy Google ID token, `POST /auth/google` → BE kiểm bằng `Google.Apis.Auth` (`Google:ClientId`), tìm/tạo `User` theo `ExternalId` (= `sub` của Google), trả `AuthModel` `{ accessToken, expiresAt, userId, email, displayName, avatarUrl }`.
+- **Access token** = JWT HS256 (claim `sub`/`email`/`name`), sống 15 phút, không lưu database. **Refresh token** = 32 byte ngẫu nhiên, sống 7 ngày, chỉ lưu **SHA-256** trong bảng `RefreshTokens`, gửi cho client qua cookie `refresh_token` (HttpOnly, Secure, SameSite=None, Path=/auth), không nằm trong JSON (`[JsonIgnore]` trên `AuthModel`).
+- `POST /auth/refresh`: đọc cookie, **xoay** token (cũ bị thu hồi, ghi `ReplacedById`). Dùng lại token đã thu hồi = nghi bị đánh cắp → thu hồi cả "họ" token (`FamilyId`, mỗi lần đăng nhập = 1 họ) của thiết bị đó, thiết bị khác không bị ảnh hưởng. `POST /auth/logout`: thu hồi token + xoá cookie (luôn 204).
+- `GET /auth/me` là endpoint đầu tiên cần `Authorization: Bearer` (`RequireAuthorization`). `JwtBearer` cấu hình trong `Program.cs` với `MapInboundClaims = false` (giữ claim `sub` đúng tên, nếu không sẽ thành `ClaimTypes.NameIdentifier`).
+- CORS policy `"Fe"` cho `http://localhost:3000` có `AllowCredentials()` (bắt buộc để cookie đi cùng). `UseHttpsRedirection` chỉ bật ngoài Development (redirect làm hỏng preflight CORS).
+- Khoá ký JWT (`Jwt:Key`, ≥ 32 ký tự) và `Google:ClientId` **không đặt trong appsettings**, dùng user-secrets: `dotnet user-secrets set "Jwt:Key" "<chuỗi ngẫu nhiên>" --project Streak.API`. Thiếu Key thì mọi token bị từ chối (401), đăng nhập báo lỗi rõ. `Jwt:Issuer/Audience/ExpiresMinutes/RefreshExpiresDays` (mặc định `streak-api`/`streak-fe`/15/7) có thể ghi đè.
+- `SameSite=None` là lối tắt cho dev (FE http://localhost:3000, API https://localhost:7022 khác scheme); khi FE và API cùng site ở production thì đổi sang Lax/Strict.
 
 ## 4. Database
 
-- SQL Server cài trực tiếp trên máy (không dùng Docker), **Windows Authentication** — không cần user/password trong code.
-- Connection string key: `Default`. Đặt ở `Streak.Api/appsettings.Development.json`:
-  `Server=localhost;Database=Streak;Trusted_Connection=True;TrustServerCertificate=True;`
-- `StreakDbContextFactory` (trong `Streak.Migrations`) dùng connection string tạm riêng, giống nhau về nội dung nhưng độc lập — đây là thiết kế chủ ý của `IDesignTimeDbContextFactory`, không phải trùng lặp thừa.
-- `EnableRetryOnFailure`: chưa thêm. `UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)` đã bật mặc định cho mọi query — không dùng lazy loading, `.Include()` rõ ràng khi cần.
+- SQL Server cài trực tiếp trên máy (không dùng Docker). Connection string key: `DefaultConnection`, đặt ở `Streak.API/appsettings.Development.json` (xem cảnh báo mật khẩu ở mục 7).
+- Entity khai báo độ dài bằng `[MaxLength]` (Id là Guid dạng chuỗi 36 ký tự); index/khoá ngoại cấu hình trong `AppDbContext.OnModelCreating`.
+- Mọi entity kế thừa `BaseEntity` (chỉ giữ Id); mốc tạo/sửa/xoá nằm ở `IAuditable`/`ISoftDelete`, entity nào cần mới implement.
+- `EnableRetryOnFailure`: chưa thêm. Không dùng lazy loading, `.Include()` rõ ràng khi cần.
 
 ### Lệnh migration (Claude chỉ tạo file khi được yêu cầu, KHÔNG tự chạy `database update`)
 
+Migration nằm ngay trong `Streak.Infrasture/Migrations/`. Development tự áp migration khi chạy API, nên thường chỉ cần tạo file:
+
 ```bash
-cd Streak.Infrastructure
-dotnet ef migrations add Init --project ../Streak.Migrations
-dotnet ef database update --project ../Streak.Migrations
+cd Streak/BE/Streak
+dotnet ef migrations add <Tên> --project Streak.Infrasture --startup-project Streak.API
 ```
 
 Đọc migration sinh ra trước khi báo hoàn thành; báo ngay nếu thấy `DropTable`/`DropColumn`/đổi kiểu gây mất dữ liệu.
@@ -111,12 +104,12 @@ dotnet ef database update --project ../Streak.Migrations
 ## 5. Lệnh thường dùng
 
 ```bash
-cd Streak/BE
+cd Streak/BE/Streak
 dotnet build Streak.slnx
-dotnet run --project Streak.Api
+dotnet run --project Streak.API --launch-profile https   # https://localhost:7022, tự mở /scalar
 ```
 
-Chạy xong, `POST /auth/register` và `/auth/login` sẽ lỗi 500 ("Cannot open database Streak") cho đến khi có migration cho bảng `Users` — đây là lỗi đúng dự kiến, không phải lỗi code.
+Cổng FE gọi là `https://localhost:7022` (profile https). Development tự `Migrate()` khi khởi động; nếu thiếu migration cho bảng mới thì đăng nhập lỗi 500 — đúng dự kiến, không phải lỗi code.
 
 ## 6. Frontend
 
@@ -138,20 +131,21 @@ Chạy xong, `POST /auth/register` và `/auth/login` sẽ lỗi 500 ("Cannot ope
 - Font: **Be Vietnam Pro** cho chữ (cả `font-display` và `font-sans`, phân biệt bằng weight 400-800) + **Anton** (class `.numeral`, token `--font-numeral`) chỉ cho **con số** trên tờ lịch (Anton có thể thiếu dấu tiếng Việt, không dùng cho chữ có dấu). Nhúng qua Google Fonts `<link>` trong `index.html` (không dùng `next/font`). Be Vietnam Pro là font thiết kế riêng cho tiếng Việt, tránh lỗi fallback glyph dấu từng gặp ở Outfit/Rubik.
 - Token màu đặt dạng CSS variable trong `src/index.css` (`--background`, `--card`, `--primary`, `--muted-foreground`...), map qua `@theme inline` sang class Tailwind (`bg-background`, `text-primary`...). Đừng viết thẳng mã hex trong component.
 - **Sáng/Tối**: tự viết (`src/components/theme-provider.tsx`, context + `localStorage` key `streak-theme`), không dùng `next-themes` (gói đó gắn với Next.js). Set class `.dark` lên `<html>` qua 1 script inline nhỏ trong `index.html` (chạy trước khi React mount, tránh nhấp nháy sai theme). Mặc định `dark`, chỉ 2 trạng thái (không có "system"). Component `src/components/theme-toggle.tsx`.
-- **Không có trang Login** — đăng nhập là popup `Dialog` của shadcn dạng một tờ lịch (`src/features/auth/components/auth-modal.tsx`). Mọi nút "Đăng nhập"/CTA gọi `useAuthModal().open()` (import qua `@/features/auth`); route lạ redirect về `/`. **Đã nối thật**: nút Google của `@react-oauth/google` (`login-form.tsx`) lấy ID token, `features/auth/api/google-login.ts` gọi `POST /auth/google`, `AuthProvider` (`auth-provider.tsx`) lưu phiên vào `localStorage` (key `streak-session`, tự bỏ khi hết hạn) và header hiện tên + nút Đăng xuất. Cần `VITE_GOOGLE_CLIENT_ID` trong `.env.local` (cùng Client ID với `Google:ClientId` của BE).
+- **Không có trang Login** — đăng nhập là popup `Dialog` của shadcn dạng một tờ lịch (`src/features/auth/components/auth-modal.tsx`). Mọi nút "Đăng nhập"/CTA gọi `useAuthModal().open()` (import qua `@/features/auth`); route lạ redirect về `/`. **Đã nối thật**: nút Google của `@react-oauth/google` (`login-form.tsx`) lấy ID token, `features/auth/api/google-login.ts` gọi `POST /auth/google`, `AuthProvider` (`auth-provider.tsx`) lưu access token vào `localStorage` (key `streak-session`) và header hiện tên + nút Đăng xuất (hỏi xác nhận, gọi `/auth/logout` + `googleLogout()`). Refresh token nằm trong cookie HttpOnly nên `request()` luôn gửi `credentials: "include"`. `features/auth/lib/session-store.ts` (`renewSession`, khoá bằng Web Locks để nhiều tab không cùng đổi token) làm mới phiên trước khi hết hạn và khi mở lại trang; tab khác đăng xuất/đăng nhập thì đồng bộ qua sự kiện `storage`. Gọi endpoint cần đăng nhập thì dùng `authedRequest` (`features/auth/api/authed-request.ts`: gắn Bearer, 401 thì làm mới và thử lại 1 lần) — chưa có chỗ nào dùng, `/auth/me` là endpoint thử. Cần `VITE_GOOGLE_CLIENT_ID` trong `.env.local` (cùng Client ID với `Google:ClientId` của BE).
 - **Motion** (đường cong `--ease-out`/`--ease-in-out` ở `index.css`, dùng `ease-(--ease-out)` trong Tailwind, đừng dùng `ease-out` built-in): `.hero-in` (vào trang, stagger bằng `transitionDelay`), `.page-in` (fade khi đổi route, `Layout` gắn key theo pathname + reset scroll), `Reveal` (`wipe` cho card, `rise` cho khối chữ/CTA, chạy 1 lần khi scroll tới), `.press` (nhấn nút), `.notice-enter` (thông báo xuất hiện), animation vào/ra của `Dialog`/`Accordion` (shadcn, từ package `tw-animate-css`, không viết CSS tay nữa), underline trượt ở nav, đổi sáng/tối bằng View Transitions API. Tất cả có nhánh `prefers-reduced-motion`.
-- Base URL của `Streak.Api` lấy từ `VITE_API_URL` qua `src/config/env.ts` (`.env.local`, mặc định `http://localhost:5083`, khớp profile **http** trong `launchSettings.json` của `Streak.API`; profile https sẽ redirect làm hỏng CORS), dùng bởi `request<T>()` ở `src/lib/api-client.ts`. `googleClientId` cũng đọc ở `env.ts`.
+- Base URL của `Streak.Api` lấy từ `VITE_API_URL` qua `src/config/env.ts` (`.env.local`, mặc định `https://localhost:7022`, khớp profile **https** trong `launchSettings.json` của `Streak.API` (cần tin cậy dev cert: `dotnet dev-certs https --trust`); redirect HTTPS chỉ bật ngoài Development), dùng bởi `request<T>()` ở `src/lib/api-client.ts`. `googleClientId` cũng đọc ở `env.ts`.
 - BE phải mở CORS cho `http://localhost:3000` (`Program.cs`, policy `"Fe"`) thì FE mới gọi được từ trình duyệt. Vite được cấu hình chạy cổng 3000 (`vite.config.ts`, `server.port`) để khớp đúng policy này — đụng tới port FE thì sửa cả 2 chỗ.
 - Alias import `@/*` → `src/*`, khai báo ở cả `vite.config.ts` (`resolve.alias`) và `tsconfig.app.json` (`paths`).
 - Lệnh: `cd Streak/fe && npm run dev` (cổng 3000), `npm run build`.
 
 ## 7. Việc còn thiếu / TODO đã biết
 
-- Entity nghiệp vụ thật (`Reminder`, `ReminderChannel`, streak/thống kê thật) chưa viết, mới có `User`.
-- Chưa có test project (cả BE và FE).
-- Repo đã `git init` và nối remote `https://github.com/DuyNM0601/Streak.git` (branch `main`). `Streak/fe/` chưa commit lần nào.
-- FE popup đăng nhập chỉ là giao diện, chưa gọi API thật. BE đã có `/auth/register`, `/auth/login`; còn thiếu: migration bảng `Users`, nối form FE, lưu token phía FE, `JwtBearer` + endpoint cần bảo vệ.
-- Chưa có migration cho bảng `Users` (chỉ tạo khi được yêu cầu, xem mục 4).
+- Entity nghiệp vụ thật (`Reminder`, `ReminderChannel`, streak/thống kê thật) chưa viết, mới có `User` + `RefreshToken`.
+- Chưa có test project (cả BE và FE). Logic refresh token đã được thử bằng chương trình tạm trên database tạm, không còn lưu lại.
+- Repo đã `git init` và nối remote `https://github.com/DuyNM0601/Streak.git` (branch `main`).
+- Migration `AddRefreshTokens` đã tạo; chạy API ở Development sẽ tự áp (hoặc `dotnet ef database update`).
+- Chưa có unique index cho `Users.ExternalId`; chưa tự điền `CreatedBy/UpdatedAt...` khi lưu; chưa có query filter soft-delete.
+- `appsettings.Development.json` đang chứa connection string `sa` + mật khẩu (theo yêu cầu người dùng, chỉ cho máy dev) — không commit lên repo công khai; nên chuyển sang user-secrets.
 
 ## 8. Cách làm việc với Claude
 

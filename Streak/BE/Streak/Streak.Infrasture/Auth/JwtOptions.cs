@@ -13,6 +13,9 @@ namespace Streak.Infrastructure.Auth
         /// <summary>Khoá ký HMAC-SHA256, tối thiểu 32 ký tự.</summary>
         public string Key { get; set; } = "";
 
-        public int ExpiresMinutes { get; set; } = 60;
+        /// <summary>Access token sống ngắn; hết hạn thì FE dùng refresh token đổi cái mới.</summary>
+        public int ExpiresMinutes { get; set; } = 15;
+
+        public int RefreshExpiresDays { get; set; } = 7;
     }
 }

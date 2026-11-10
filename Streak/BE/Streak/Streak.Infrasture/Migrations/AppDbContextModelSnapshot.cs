@@ -22,6 +22,52 @@ namespace Streak.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Streak.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("nvarchar(36)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FamilyId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("nvarchar(36)");
+
+                    b.Property<string>("ReplacedById")
+                        .HasMaxLength(36)
+                        .HasColumnType("nvarchar(36)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("nvarchar(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("Streak.Domain.Entities.User", b =>
                 {
                     b.Property<string>("Id")
@@ -71,6 +117,15 @@ namespace Streak.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Streak.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("Streak.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

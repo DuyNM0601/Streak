@@ -1,9 +1,11 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { GoogleOAuthProvider } from "@react-oauth/google";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { GoogleOAuthProvider, googleLogout } from "@react-oauth/google";
 import { googleClientId } from "@/config/env";
+import { logout } from "../api/session";
+import { REFRESH_SKEW_MS, STORAGE_KEY, isFresh, persist, readStored, renewSession } from "../lib/session-store";
 import type { AuthSession } from "../types";
 
-const STORAGE_KEY = "streak-session";
+const RETRY_MS = 15_000;
 
 type AuthContextValue = {
   session: AuthSession | null;
@@ -13,29 +15,61 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// shortcut: JWT lưu trong localStorage (XSS đọc được), đủ cho giai đoạn học; nâng lên cookie HttpOnly khi làm thật.
-function readSession(): AuthSession | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const saved = JSON.parse(raw) as AuthSession;
-    return new Date(saved.expiresAt) > new Date() ? saved : null;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(readSession);
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    const stored = readStored();
+    return stored && isFresh(stored) ? stored : null;
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    let retryId: ReturnType<typeof setTimeout> | undefined;
+    const renew = async () => {
+      try {
+        const next = await renewSession();
+        if (!cancelled) setSession(next);
+      } catch {
+        // Lỗi mạng / BE tạm lỗi: giữ nguyên phiên, thử lại sau (không đăng xuất oan).
+        if (!cancelled) retryId = setTimeout(renew, RETRY_MS);
+      }
+    };
+
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    if (session) {
+      // Hẹn làm mới ngay trước khi access token hết hạn.
+      const delay = Math.max(new Date(session.expiresAt).getTime() - Date.now() - REFRESH_SKEW_MS, 0);
+      timerId = setTimeout(renew, delay);
+    } else if (readStored()) {
+      // Có phiên cũ đã hết hạn trong localStorage: thử đổi bằng refresh token (cookie) thay vì bắt đăng nhập lại.
+      void renew();
+    }
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+      clearTimeout(retryId);
+    };
+  }, [session]);
+
+  // Tab khác đăng nhập / đăng xuất / làm mới thì tab này theo ngay (sự kiện storage chỉ bắn ở các tab còn lại).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) setSession(readStored());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const signIn = useCallback((next: AuthSession) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    persist(next);
     setSession(next);
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    persist(null);
     setSession(null);
+    googleLogout(); // tắt tự chọn tài khoản của Google để lần sau phải chọn lại
+    // Thu hồi refresh token ở BE; lỗi mạng cũng không chặn đăng xuất phía FE.
+    logout().catch(() => {});
   }, []);
 
   return (

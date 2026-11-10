@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Streak.Application.Common;
 using Streak.Domain.Entities;
 
@@ -11,8 +8,18 @@ namespace Streak.Infrastructure.Data
     {
         public DbSet<User> Users { get; set; }
 
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // Tra token theo TokenHash ở mỗi lần làm mới nên cần unique index.
+            modelBuilder.Entity<RefreshToken>().HasIndex(x => x.TokenHash).IsUnique();
+            modelBuilder.Entity<RefreshToken>().HasIndex(x => x.FamilyId);
+            modelBuilder.Entity<RefreshToken>().HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
         }
     }
 }

@@ -52,16 +52,9 @@ namespace Streak.Application.Features.Auth.Commands
                 await db.SaveChangesAsync(ct);
             }
 
-            AccessToken token = tokens.Create(user);
-            return Ok(new AuthModel
-            {
-                AccessToken = token.Value,
-                ExpiresAt = token.ExpiresAt,
-                UserId = user.Id,
-                Email = user.Email,
-                DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl,
-            });
+            var (model, _) = AuthIssuer.Issue(user, tokens, db);
+            await db.SaveChangesAsync(ct);
+            return Ok(model);
         }
     }
 }

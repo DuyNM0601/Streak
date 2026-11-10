@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -33,5 +34,15 @@ namespace Streak.Infrastructure.Auth
 
             return new AccessToken(new JsonWebTokenHandler().CreateToken(descriptor), expiresAt);
         }
+
+        public NewRefreshToken CreateRefreshToken()
+        {
+            string value = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(32));
+            return new NewRefreshToken(value, HashRefreshToken(value), DateTimeOffset.UtcNow.AddDays(options.RefreshExpiresDays));
+        }
+
+        // Token là 256 bit ngẫu nhiên nên SHA-256 thường là đủ, không cần băm chậm như mật khẩu.
+        public string HashRefreshToken(string value) =>
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     }
 }

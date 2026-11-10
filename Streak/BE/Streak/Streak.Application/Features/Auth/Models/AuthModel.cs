@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Streak.Application.Features.Auth.Models
 {
     /// <summary>Model trả về cho client sau khi đăng nhập, không lộ Entity.</summary>
@@ -14,5 +16,12 @@ namespace Streak.Application.Features.Auth.Models
         public string DisplayName { get; set; } = default!;
 
         public string? AvatarUrl { get; set; }
+
+        /// <summary>Chỉ để tầng API đặt vào cookie HttpOnly, KHÔNG bao giờ nằm trong JSON trả về.</summary>
+        [JsonIgnore]
+        public string? RefreshToken { get; set; }
+
+        [JsonIgnore]
+        public DateTimeOffset RefreshTokenExpiresAt { get; set; }
     }
 }

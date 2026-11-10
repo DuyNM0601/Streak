@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { useAuth, useAuthModal } from "@/features/auth";
+import { SignOutButton, useAuth, useAuthModal } from "@/features/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +9,7 @@ const navLink =
 
 export function SiteHeader() {
   const { open } = useAuthModal();
-  const { session, signOut } = useAuth();
+  const { session } = useAuth();
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background">
@@ -36,14 +36,7 @@ export function SiteHeader() {
           {session ? (
             <>
               <span className="hidden max-w-40 truncate text-sm font-semibold sm:inline">{session.displayName}</span>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={signOut}
-                className="h-10 rounded-full border-foreground/35 bg-transparent px-5 text-sm font-semibold text-foreground hover:bg-foreground/10 hover:text-foreground dark:border-foreground/35 dark:bg-transparent dark:hover:bg-foreground/10"
-              >
-                Đăng xuất
-              </Button>
+              <SignOutButton />
             </>
           ) : (
             <Button type="button" onClick={open} className="h-10 rounded-full px-5 text-sm font-semibold">

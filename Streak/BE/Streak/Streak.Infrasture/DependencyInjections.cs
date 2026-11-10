@@ -28,6 +28,8 @@ namespace Streak.Infrastructure
             jwtOptions.Key = configuration["Jwt:Key"] ?? jwtOptions.Key;
             if (int.TryParse(configuration["Jwt:ExpiresMinutes"], out int expiresMinutes))
                 jwtOptions.ExpiresMinutes = expiresMinutes;
+            if (int.TryParse(configuration["Jwt:RefreshExpiresDays"], out int refreshExpiresDays))
+                jwtOptions.RefreshExpiresDays = refreshExpiresDays;
             services.AddSingleton(jwtOptions);
 
             var googleOptions = new GoogleOptions { ClientId = configuration["Google:ClientId"] ?? "" };
