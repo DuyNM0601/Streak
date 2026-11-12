@@ -10,6 +10,8 @@ namespace Streak.Infrastructure.Data
 
         public DbSet<RefreshToken> RefreshTokens { get; set; }
 
+        public DbSet<Reminder> Reminders { get; set; }
+
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
@@ -20,6 +22,10 @@ namespace Streak.Infrastructure.Data
             modelBuilder.Entity<RefreshToken>().HasIndex(x => x.TokenHash).IsUnique();
             modelBuilder.Entity<RefreshToken>().HasIndex(x => x.FamilyId);
             modelBuilder.Entity<RefreshToken>().HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
+
+            // Danh sách nhắc nhở luôn lọc theo UserId.
+            modelBuilder.Entity<Reminder>().HasIndex(x => x.UserId);
+            modelBuilder.Entity<Reminder>().HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
         }
     }
 }

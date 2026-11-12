@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
+import { useLoadingOverlay } from "@/components/loading-overlay";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { googleClientId } from "@/config/env";
 import { ApiError } from "@/lib/api-client";
@@ -9,12 +10,15 @@ import { useAuth } from "./auth-provider";
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const { signIn } = useAuth();
   const [notice, setNotice] = useState<string | null>(null);
+  const { show } = useLoadingOverlay();
 
   async function handleCredential(idToken?: string) {
     if (!idToken) {
       setNotice("Google không trả về thông tin đăng nhập. Hãy thử lại.");
       return;
     }
+    const hide = show("Đang đăng nhập...");
+    setNotice(null);
     try {
       signIn(await googleLogin(idToken));
       onSuccess();
@@ -24,6 +28,8 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           ? "Tài khoản Google không hợp lệ hoặc đã bị xoá."
           : "Không đăng nhập được, máy chủ đang gặp lỗi. Hãy thử lại sau.",
       );
+    } finally {
+      hide();
     }
   }
 

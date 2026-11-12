@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using Streak.API;
 using Streak.API.Features.Auth;
+using Streak.API.Features.Reminders;
 using Streak.Application;
 using Streak.Infrastructure;
 using Streak.Infrastructure.Auth;
@@ -17,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApi();
 builder.Services.AddProblemDetails();
 
 // shortcut: origin FE ghi cứng cho dev (cổng 3000 khớp vite.config.ts), đưa vào cấu hình khi có domain thật.
@@ -69,5 +72,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthApi();
+app.MapReminderApi();
 
 app.Run();

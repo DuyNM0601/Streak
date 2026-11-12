@@ -9,6 +9,8 @@ namespace Streak.Application.Common
 
         DbSet<RefreshToken> RefreshTokens { get; }
 
+        DbSet<Reminder> Reminders { get; }
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

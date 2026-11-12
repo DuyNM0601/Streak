@@ -26,15 +26,18 @@ Người dùng nói chuyện bằng tiếng Việt. Trả lời, comment giải 
 Streak/BE/Streak/
   Streak.slnx
   Streak.Domain/
-    Entities/BaseEntity, IAuditable, ISoftDelete, User, RefreshToken   # không biết EF Core, không biết ai cả
+    Entities/BaseEntity, IAuditable, ISoftDelete, User, RefreshToken, Reminder, Weekdays   # không biết EF Core, không biết ai cả
   Streak.Application/
-    Common/IAppDbContext, ITokenService, IGoogleTokenVerifier   # interface Application cần, Infrastructure cài đặt
+    Common/IAppDbContext, ITokenService, IGoogleTokenVerifier, ICurrentUser   # interface Application cần, Infrastructure/API cài đặt
     Shared/Result.cs           # Result<T>, Error(ErrorType, Code, Message) — thuần, KHÔNG tham chiếu IResult (ASP.NET Core)
-    Shared/Cqrs.cs             # ICommand<T>, CommandHandler<,> (HandleAsync public abstract, Ok/Fail)
+    Shared/Cqrs.cs             # ICommand<T>/IQuery<T>, CommandHandler<,>/QueryHandler<,> (HandleAsync public abstract, Ok/Fail)
     Features/Auth/
       Commands/GoogleLogin, RefreshToken, Logout (Command + Handler)
       Models/AuthModel.cs      # model trả về client, không lộ Entity
       AuthIssuer.cs            # dùng chung: phát access token + refresh token mới
+    Features/Reminders/
+      Commands/CreateReminder, UpdateReminder, DeleteReminder (xoá mềm), Queries/ListReminders; ReminderRules.cs = luật kiểm tra dùng chung
+      Models/ReminderModel.cs
     DependencyInjections.cs    # AddApplication(): AddMediatR
   Streak.Infrasture/           # project Streak.Infrastructure
     Data/AppDbContext.cs : IAppDbContext
@@ -43,7 +46,9 @@ Streak/BE/Streak/
     DependencyInjections.cs    # AddInfrastructure(config)
   Streak.API/
     Shared/ResultHttpExtensions.cs   # ToHttpResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core
+    Shared/CurrentUser.cs            # cài ICurrentUser: đọc claim "sub" từ token (đăng ký trong API/DependencyInjections.cs: AddApi())
     Features/Auth/AuthEndpoints.cs   # MapAuthApi(): /auth/google, /refresh, /logout, /me
+    Features/Reminders/ReminderEndpoints.cs   # MapReminderApi(): POST/GET /reminders, PUT/DELETE /reminders/{id} (RequireAuthorization)
     Program.cs
 Streak/fe/   # Vite + React (React thuần, không phải Next.js), xem mục 6
 ```
@@ -120,8 +125,8 @@ Cổng FE gọi là `https://localhost:7022` (profile https). Development tự `
 - Routing bằng `react-router-dom`: route khai báo ở `src/app/router.tsx` (`<Routes>`/`<Route>`), layout chung (`src/components/layout/layout.tsx`, có `<Outlet/>`) bọc `SiteHeader` (`src/components/layout/site-header.tsx`) quanh mọi trang. Không phải file-based routing kiểu Next.js — trang (route) nằm ở `src/app/routes/*.tsx`.
 - **Cấu trúc thư mục FE** theo kiểu [bulletproof-react](https://github.com/alan2207/bulletproof-react) (feature-based), áp từ khi có nhiều component dùng tay cần tổ chức lại:
   - `src/app/` — `app.tsx` (gộp `AppProvider` + `AppRouter`), `provider.tsx` (context toàn cục: theme, auth modal), `router.tsx` (route), `routes/*.tsx` (1 file/trang, nhận từ `src/pages/` cũ).
-  - `src/features/{feature}/` — mỗi nghiệp vụ 1 thư mục con `components/`, `api/`, `types.ts`, và 1 `index.ts` làm public API (chỗ khác import qua `@/features/{feature}`, không import sâu vào trong). Hiện có `auth/` (modal + form đăng nhập, chưa gọi API).
-  - `src/components/` — dùng chung, không gắn nghiệp vụ nào: `ui/` (shadcn, xem dưới), `layout/` (header + khung trang), `theme-provider.tsx`, `theme-toggle.tsx`, `reveal.tsx`.
+  - `src/features/{feature}/` — mỗi nghiệp vụ 1 thư mục con `components/`, `api/`, `types.ts`, và 1 `index.ts` làm public API (chỗ khác import qua `@/features/{feature}`, không import sâu vào trong). Hiện có `auth/` (đăng nhập Google, phiên, refresh token) và `reminders/` (form tạo/sửa + danh sách có công tắc bật-tắt, nút sửa/xoá (xác nhận), gọi `/reminders` qua `authedRequest`; trang `/reminders`, link "Nhắc nhở" ở header).
+  - `src/components/` — dùng chung, không gắn nghiệp vụ nào: `ui/` (shadcn, xem dưới), `layout/` (header + khung trang), `theme-provider.tsx`, `theme-toggle.tsx`, `reveal.tsx`, `loading-overlay.tsx` (`LoadingOverlayProvider` ở `AppProvider`; `FullScreenLoading` / `useLoadingOverlay().show()` = loading phủ TOÀN màn hình, chặn thao tác, dùng khi đổi cả màn hình: đăng nhập, đăng xuất, khôi phục phiên, tải dữ liệu trang), `loading.tsx` (`LoadingSpinner`) và `loading-button.tsx` (`LoadingButton`: nút có vòng xoay, tự khoá, `aria-busy`, dùng cho việc nhỏ trong một khối như lưu form/xoá/bật-tắt). Không tự viết "Đang tải..." riêng.
   - `src/lib/` — `api-client.ts` (hàm `request<T>()` + `ApiError` gọi fetch chung, không biết feature nào), `utils.ts` (`cn()` — **đừng tự sửa/di chuyển**, `components.json` của shadcn CLI trỏ cứng vào đường dẫn này).
   - `src/config/env.ts` — đọc biến môi trường (`VITE_API_URL`...), không đọc `import.meta.env` trực tiếp ở nơi khác.
   - `src/hooks/` — hook dùng chung (hiện có `use-mobile.ts`, đi theo component `sidebar` của shadcn).
@@ -144,6 +149,7 @@ Cổng FE gọi là `https://localhost:7022` (profile https). Development tự `
 - Chưa có test project (cả BE và FE). Logic refresh token đã được thử bằng chương trình tạm trên database tạm, không còn lưu lại.
 - Repo đã `git init` và nối remote `https://github.com/DuyNM0601/Streak.git` (branch `main`).
 - Migration `AddRefreshTokens` đã tạo; chạy API ở Development sẽ tự áp (hoặc `dotnet ef database update`).
+- `Reminder` (giờ địa phương + múi giờ IANA + các thứ trong tuần dạng bit `Weekdays`) đã có entity, `/reminders` (tạo, xem, sửa, xoá), migration `AddReminders` đã tạo (Development tự áp khi chạy API). Chưa có sửa/xoá/bật-tắt nhắc nhở, chưa có FE, chưa có tiến trình nền gửi nhắc (web/email/gọi điện) và leo thang kênh. `UserId` lấy qua `ICurrentUser` (claim `sub` của token), command/query và body không có userId.
 - Chưa có unique index cho `Users.ExternalId`; chưa tự điền `CreatedBy/UpdatedAt...` khi lưu; chưa có query filter soft-delete.
 - `appsettings.Development.json` đang chứa connection string `sa` + mật khẩu (theo yêu cầu người dùng, chỉ cho máy dev) — không commit lên repo công khai; nên chuyển sang user-secrets.
 

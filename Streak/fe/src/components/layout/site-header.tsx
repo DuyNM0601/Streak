@@ -31,6 +31,9 @@ export function SiteHeader() {
           <NavLink to="/guide" className={({ isActive }) => `${navLink} ${isActive ? "text-foreground after:scale-x-100" : ""}`}>
             Hướng dẫn
           </NavLink>
+          <NavLink to="/reminders" className={({ isActive }) => `${navLink} ${isActive ? "text-foreground after:scale-x-100" : ""}`}>
+            Nhắc nhở
+          </NavLink>
         </nav>
         <div className="flex items-center gap-3">
           {session ? (
